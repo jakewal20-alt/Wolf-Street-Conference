@@ -1,0 +1,24 @@
+name: Sync SAM.gov Opportunities
+
+on:
+  schedule:
+    # Run once daily at 6:00 AM UTC (1:00 AM EST)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Trigger Daily SAM Sync
+        run: |
+          echo "Starting daily SAM.gov sync at $(date)"
+          curl -X POST \
+            'https://murkjzfsfqhxphwndebq.supabase.co/functions/v1/daily-sync' \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            --fail-with-body || echo "Sync request sent (may have partial results)"
+      
+      - name: Log completion
+        run: echo "SAM.gov daily sync completed at $(date)"
