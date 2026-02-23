@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, Link2, ExternalLink, Users, UserPlus } from "lucide-react";
+import { Plus, Upload, Link2, ExternalLink, Users, UserPlus, Mic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LeadCard } from "./LeadCard";
 import { AddLeadDialog } from "./AddLeadDialog";
@@ -13,6 +13,8 @@ import { PartnerNotesDialog } from "./PartnerNotesDialog";
 import { LinkCalendarEventDialog } from "./LinkCalendarEventDialog";
 import { ShareConferenceDialog } from "./ShareConferenceDialog";
 import { ExecutiveSummary } from "./ExecutiveSummary";
+import { VoiceRecapDialog } from "./VoiceRecapDialog";
+import { VoiceRecapsList } from "./VoiceRecapsList";
 import { useNavigate } from "react-router-dom";
 
 interface ConferenceLeadsPanelProps {
@@ -26,6 +28,7 @@ export function ConferenceLeadsPanel({ conference }: ConferenceLeadsPanelProps) 
   const [showPartnerNotesDialog, setShowPartnerNotesDialog] = useState(false);
   const [showLinkCalendarDialog, setShowLinkCalendarDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showVoiceRecapDialog, setShowVoiceRecapDialog] = useState(false);
   const navigate = useNavigate();
 
   // Check if current user is the owner
@@ -56,11 +59,11 @@ export function ConferenceLeadsPanel({ conference }: ConferenceLeadsPanelProps) 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Show ALL leads for this conference to all collaborators (not just created_by)
       const { data, error } = await supabase
         .from("conference_leads")
         .select("*")
         .eq("conference_id", conference.id)
-        .eq("created_by", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -161,14 +164,24 @@ export function ConferenceLeadsPanel({ conference }: ConferenceLeadsPanelProps) 
                 <Plus className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Add Lead</span>
               </Button>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 onClick={() => setShowUploadCardDialog(true)}
                 className="flex-1 sm:flex-none"
               >
                 <Upload className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Business Card</span>
                 <span className="sm:hidden">Card</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowVoiceRecapDialog(true)}
+                className="flex-1 sm:flex-none"
+              >
+                <Mic className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Voice Recap</span>
+                <span className="sm:hidden">Recap</span>
               </Button>
             </div>
           </div>
@@ -217,6 +230,9 @@ export function ConferenceLeadsPanel({ conference }: ConferenceLeadsPanelProps) 
         </div>
       )}
 
+      {/* Voice Recaps Section */}
+      <VoiceRecapsList conferenceId={conference.id} />
+
       {/* Executive Summary Section */}
       <ExecutiveSummary conference={conference} />
 
@@ -251,6 +267,12 @@ export function ConferenceLeadsPanel({ conference }: ConferenceLeadsPanelProps) 
         onOpenChange={setShowShareDialog}
         conferenceId={conference.id}
         conferenceName={conference.name}
+      />
+      <VoiceRecapDialog
+        open={showVoiceRecapDialog}
+        onOpenChange={setShowVoiceRecapDialog}
+        conferenceId={conference.id}
+        leads={leads || []}
       />
     </div>
   );

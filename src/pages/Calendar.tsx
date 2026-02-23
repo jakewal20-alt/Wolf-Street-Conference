@@ -1,22 +1,18 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfWeek, startOfMonth, endOfMonth, addDays, addMonths, isSameDay, isToday, isPast, differenceInDays, eachDayOfInterval } from "date-fns";
+import { format, startOfWeek, startOfMonth, endOfMonth, addDays, addMonths, isToday, isPast, eachDayOfInterval } from "date-fns";
 import { parseDateLocal } from "@/utils/dateHelpers";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3, Rows3, Filter, X, List, Download, Plus, Loader2, Sparkles, Mail } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3, Rows3, List, Download, Plus, Loader2, Sparkles, Mail } from "lucide-react";
 import { OutlookSyncButton } from "@/components/calendar/OutlookSyncButton";
 import { Button } from "@/components/ui/button";
-import { DndContext, DragEndEvent, DragOverlay, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,16 +24,6 @@ import { ColorPicker } from "@/components/calendar/ColorPicker";
 import { IconSelector } from "@/components/calendar/IconSelector";
 import { CalendarLegend } from "@/components/calendar/CalendarLegend";
 import { getEventTypeLabel, getEventColor, getEventIcon } from "@/utils/eventTypeHelpers";
-
-interface Opportunity {
-  id: string;
-  title: string;
-  agency: string | null;
-  status: string | null;
-  due_date: string | null;
-  fit_score: number | null;
-  source: string | null;
-}
 
 interface CalendarEvent {
   id: string;
@@ -60,15 +46,9 @@ interface CalendarEvent {
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("month");
-  const [draggedItem, setDraggedItem] = useState<Opportunity | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddDate, setQuickAddDate] = useState<Date | null>(null);
   const [newEventTitle, setNewEventTitle] = useState("");
-  const [newEventAgency, setNewEventAgency] = useState("");
-  const [newEventSynopsis, setNewEventSynopsis] = useState("");
-  const [newEventStatus, setNewEventStatus] = useState("new");
-  const [newEventType, setNewEventType] = useState<"opportunity" | "custom">("custom");
   const [customEventType, setCustomEventType] = useState("travel");
   const [customEventDescription, setCustomEventDescription] = useState("");
   const [customEventLocation, setCustomEventLocation] = useState("");
@@ -79,47 +59,18 @@ const Calendar = () => {
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showDayEventsDialog, setShowDayEventsDialog] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [urgencyFilters, setUrgencyFilters] = useState({
-    critical: true,
-    high: true,
-    upcoming: true,
-    normal: true,
-    expired: true,
-  });
-  const [statusFilters, setStatusFilters] = useState({
-    new: true,
-    pursuing: true,
-    bidding: true,
-    submitted: true,
-    won: true,
-    lost: true,
-  });
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  
+
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
   const calendarEnd = addDays(calendarStart, 41); // 6 weeks
   const monthDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-
-  const { data: opportunities = [], isLoading } = useQuery({
-    queryKey: ["opportunities-calendar"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("opportunities")
-        .select("id, title, agency, status, due_date, fit_score, source")
-        .or('source.eq.Manual Import,pursuit_status.eq.active')
-        .order("due_date", { ascending: true });
-
-      if (error) throw error;
-      return data as Opportunity[];
-    },
-  });
 
   // Fetch users who have shared conferences/calendar with current user
   const { data: sharedCalendarUsers } = useQuery({
@@ -186,73 +137,6 @@ const Calendar = () => {
       })) as CalendarEvent[];
     },
     enabled: sharedCalendarUsers !== undefined,
-  });
-
-  const updateDueDateMutation = useMutation({
-    mutationFn: async ({ id, newDate }: { id: string; newDate: string }) => {
-      const { error } = await supabase
-        .from("opportunities")
-        .update({ due_date: newDate })
-        .eq("id", id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["opportunities-calendar"] });
-      toast({
-        title: "Due date updated",
-        description: "Opportunity has been rescheduled successfully.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update due date.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const createOpportunityMutation = useMutation({
-    mutationFn: async (newOpportunity: {
-      title: string;
-      agency: string;
-      synopsis: string;
-      status: string;
-      due_date: string;
-    }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { error } = await supabase
-        .from("opportunities")
-        .insert([{
-          ...newOpportunity,
-          opportunity_number: `OPP-${Date.now()}`,
-          user_id: user.id,
-        }]);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["opportunities-calendar"] });
-      toast({
-        title: "Opportunity created",
-        description: "New opportunity added to calendar.",
-      });
-      setShowQuickAdd(false);
-      setNewEventTitle("");
-      setNewEventAgency("");
-      setNewEventSynopsis("");
-      setNewEventStatus("new");
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create opportunity.",
-        variant: "destructive",
-      });
-    },
   });
 
   const createCalendarEventMutation = useMutation({
@@ -374,20 +258,20 @@ const Calendar = () => {
     mutationFn: async ({ eventId, email }: { eventId: string; email?: string }) => {
       // If custom email provided, send as test_email to override
       const body: { event_id: string; test_email?: string } = { event_id: eventId };
-      
+
       if (email) {
         body.test_email = email;
       } else {
         // Send to self - get user's email from profile
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Not authenticated");
-        
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("email")
           .eq("id", user.id)
           .single();
-        
+
         if (profile?.email) {
           body.test_email = profile.email;
         }
@@ -415,56 +299,12 @@ const Calendar = () => {
     },
   });
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
-
-  const handleDragStart = (event: any) => {
-    const opportunity = opportunities.find((o) => o.id === event.active.id);
-    setDraggedItem(opportunity || null);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    setDraggedItem(null);
-    
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const opportunityId = active.id as string;
-    const newDate = over.id as string;
-
-    updateDueDateMutation.mutate({ id: opportunityId, newDate });
-  };
-
-  const getOpportunitiesForDay = (date: Date) => {
-    const opps = opportunities.filter((opp) => {
-      if (!opp.due_date) return false;
-      if (!isSameDay(new Date(opp.due_date), date)) return false;
-      
-      // Apply urgency filter
-      const urgency = getUrgencyLevel(opp.due_date);
-      if (!urgencyFilters[urgency as keyof typeof urgencyFilters]) return false;
-      
-      // Apply status filter
-      const status = (opp.status?.toLowerCase() || "new") as keyof typeof statusFilters;
-      if (!statusFilters[status]) return false;
-      
-      return true;
-    });
-
-    return opps;
-  };
-
   const getCalendarEventsForDay = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return calendarEvents.filter((event) => {
       const eventStartStr = event.start_date.split('T')[0];
       const eventEndStr = event.end_date ? event.end_date.split('T')[0] : eventStartStr;
-      
+
       // Check if date falls within the event date range (inclusive)
       return dateStr >= eventStartStr && dateStr <= eventEndStr;
     });
@@ -478,70 +318,34 @@ const Calendar = () => {
         .select("id")
         .eq("calendar_event_id", event.id)
         .single();
-      
+
       if (conference) {
         navigate(`/conferences?selected=${conference.id}`);
         return;
       }
     }
-    
+
     // Otherwise show the event dialog
     setSelectedEvent(event);
     setShowEventDialog(true);
   };
 
-  const toggleUrgencyFilter = (urgency: keyof typeof urgencyFilters) => {
-    setUrgencyFilters(prev => ({ ...prev, [urgency]: !prev[urgency] }));
-  };
-
-  const toggleStatusFilter = (status: keyof typeof statusFilters) => {
-    setStatusFilters(prev => ({ ...prev, [status]: !prev[status] }));
-  };
-
-  const resetFilters = () => {
-    setUrgencyFilters({
-      critical: true,
-      high: true,
-      upcoming: true,
-      normal: true,
-      expired: true,
-    });
-    setStatusFilters({
-      new: true,
-      pursuing: true,
-      bidding: true,
-      submitted: true,
-      won: true,
-      lost: true,
-    });
-  };
-
   const handleQuickAdd = () => {
-    if (!newEventTitle || !quickAddDate) return;
+    if (!newEventTitle) return;
 
-    if (newEventType === "opportunity") {
-      createOpportunityMutation.mutate({
-        title: newEventTitle,
-        agency: newEventAgency,
-        synopsis: newEventSynopsis,
-        status: newEventStatus,
-        due_date: format(quickAddDate, "yyyy-MM-dd"),
-      });
-    } else {
-      // Use customEventStartDate if available, fallback to quickAddDate
-      const startDate = customEventStartDate || quickAddDate;
-      if (!startDate) return;
-      
-      createCalendarEventMutation.mutate({
-        title: newEventTitle,
-        description: customEventDescription,
-        event_type: customEventType,
-        start_date: format(startDate, "yyyy-MM-dd"),
-        end_date: customEventEndDate ? format(customEventEndDate, "yyyy-MM-dd") : null,
-        location: customEventLocation,
-        invite_email: customEventInviteEmail || null,
-      });
-    }
+    // Use customEventStartDate if available, fallback to quickAddDate
+    const startDate = customEventStartDate || quickAddDate;
+    if (!startDate) return;
+
+    createCalendarEventMutation.mutate({
+      title: newEventTitle,
+      description: customEventDescription,
+      event_type: customEventType,
+      start_date: format(startDate, "yyyy-MM-dd"),
+      end_date: customEventEndDate ? format(customEventEndDate, "yyyy-MM-dd") : null,
+      location: customEventLocation,
+      invite_email: customEventInviteEmail || null,
+    });
   };
 
   const handleDateClick = (date: Date) => {
@@ -558,19 +362,21 @@ const Calendar = () => {
   };
 
   const exportToICalendar = () => {
-    const icsEvents = opportunities
-      .filter(opp => opp.due_date)
-      .map(opp => {
-        const dueDate = new Date(opp.due_date!);
-        const formattedDate = format(dueDate, "yyyyMMdd'T'HHmmss'Z'");
+    const icsEvents = calendarEvents
+      .map(event => {
+        const startDate = parseDateLocal(event.start_date);
+        const formattedStart = format(startDate, "yyyyMMdd'T'HHmmss'Z'");
+        const endDate = event.end_date ? parseDateLocal(event.end_date) : startDate;
+        const formattedEnd = format(endDate, "yyyyMMdd'T'HHmmss'Z'");
         return [
           'BEGIN:VEVENT',
-          `UID:${opp.id}@bdradar.app`,
-          `DTSTAMP:${formattedDate}`,
-          `DTSTART:${formattedDate}`,
-          `SUMMARY:${opp.title}`,
-          `DESCRIPTION:Agency: ${opp.agency || 'N/A'}\\nStatus: ${opp.status || 'N/A'}\\nFit Score: ${opp.fit_score || 'N/A'}`,
-          `LOCATION:${opp.agency || ''}`,
+          `UID:${event.id}@calendar.app`,
+          `DTSTAMP:${formattedStart}`,
+          `DTSTART:${formattedStart}`,
+          `DTEND:${formattedEnd}`,
+          `SUMMARY:${event.title}`,
+          `DESCRIPTION:${event.description || ''}`,
+          `LOCATION:${event.location || ''}`,
           'END:VEVENT'
         ].join('\\r\\n');
       });
@@ -578,7 +384,7 @@ const Calendar = () => {
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//BD Radar//Calendar Export//EN',
+      'PRODID:-//Calendar//Calendar Export//EN',
       'CALSCALE:GREGORIAN',
       ...icsEvents,
       'END:VCALENDAR'
@@ -587,58 +393,15 @@ const Calendar = () => {
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `bd-radar-calendar-${format(new Date(), 'yyyy-MM-dd')}.ics`;
+    link.download = `calendar-export-${format(new Date(), 'yyyy-MM-dd')}.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast({
       title: "Calendar exported",
       description: "Your calendar has been downloaded as an iCalendar file.",
     });
-  };
-
-  const getUrgencyLevel = (dueDate: string | null) => {
-    if (!dueDate) return "none";
-    const now = new Date();
-    const due = new Date(dueDate);
-    const daysUntilDue = differenceInDays(due, now);
-    
-    if (daysUntilDue < 0) return "expired";
-    if (daysUntilDue <= 3) return "critical";
-    if (daysUntilDue <= 7) return "high";
-    if (daysUntilDue <= 14) return "upcoming";
-    return "normal";
-  };
-
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "critical":
-        return "bg-urgent text-urgent-foreground border-urgent";
-      case "high":
-        return "bg-warning text-warning-foreground border-warning";
-      case "upcoming":
-        return "bg-success text-success-foreground border-success";
-      case "expired":
-        return "bg-expired text-expired-foreground border-expired";
-      default:
-        return "bg-muted text-muted-foreground border-border";
-    }
-  };
-
-  const getUrgencyBadge = (urgency: string) => {
-    switch (urgency) {
-      case "critical":
-        return <Badge variant="destructive" className="text-xs">Critical</Badge>;
-      case "high":
-        return <Badge className="text-xs bg-warning text-warning-foreground">High</Badge>;
-      case "upcoming":
-        return <Badge className="text-xs bg-success text-success-foreground">Upcoming</Badge>;
-      case "expired":
-        return <Badge variant="secondary" className="text-xs">Expired</Badge>;
-      default:
-        return null;
-    }
   };
 
   return (
@@ -683,50 +446,10 @@ const Calendar = () => {
                 <Download className="h-4 w-4" />
                 Export Calendar
               </Button>
-              
+
               {/* Outlook Sync Button */}
               <OutlookSyncButton calendarEvents={calendarEvents} />
             </div>
-          </Card>
-
-          {/* Upcoming Deadlines - Glassmorphism */}
-          <Card className="p-5 shadow-xl border backdrop-blur-md bg-card/80 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-urgent/5 via-transparent to-warning/5 pointer-events-none" />
-            <div className="flex items-center gap-2 mb-4 relative z-10">
-              <div className="h-2.5 w-2.5 rounded-full bg-urgent animate-pulse shadow-lg shadow-urgent/50" />
-              <h3 className="font-display font-semibold text-sm text-foreground/80">Upcoming Deadlines</h3>
-            </div>
-            <ScrollArea className="h-[280px] relative z-10">
-              <div className="space-y-2 pr-4">
-                {opportunities
-                  .filter((opp) => opp.due_date && new Date(opp.due_date) >= new Date())
-                  .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
-                  .slice(0, 5)
-                  .map((opp, index) => {
-                    const urgency = getUrgencyLevel(opp.due_date);
-                    return (
-                      <div
-                        key={opp.id}
-                        className={cn(
-                          "text-xs p-3 rounded-lg border-l-4 cursor-pointer",
-                          "hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5",
-                          "transition-all duration-300 ease-out",
-                          "animate-fade-in",
-                          getUrgencyColor(urgency)
-                        )}
-                        style={{ animationDelay: `${index * 50}ms` }}
-                        onClick={() => navigate(`/opportunity/${opp.id}`)}
-                      >
-                        <div className="font-semibold truncate mb-1">{opp.title}</div>
-                        <div className="text-muted-foreground flex items-center gap-1">
-                          <CalendarIcon className="h-3 w-3" />
-                          {format(new Date(opp.due_date!), "MMM d, yyyy")}
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </ScrollArea>
           </Card>
 
           {/* Upcoming Events - Glassmorphism */}
@@ -751,7 +474,7 @@ const Calendar = () => {
                     const eventColor = getEventColor(event.color_hex, effectiveType);
                     const EventIcon = getEventIcon(event.icon_name, effectiveType);
                     const eventLabel = getEventTypeLabel(effectiveType, event.type_custom);
-                    
+
                     return (
                       <div
                         key={event.id}
@@ -761,7 +484,7 @@ const Calendar = () => {
                           "transition-all duration-300 ease-out",
                           "animate-fade-in"
                         )}
-                        style={{ 
+                        style={{
                           backgroundColor: `${eventColor}15`,
                           borderLeftColor: eventColor,
                           borderLeftWidth: '4px',
@@ -809,7 +532,7 @@ const Calendar = () => {
                 <h1 className="text-4xl font-display font-bold text-foreground mb-2">Calendar</h1>
                 <p className="text-muted-foreground flex items-center gap-2">
                   <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
-                  Track deadlines with intelligent color coding
+                  Track conferences and events
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -880,150 +603,22 @@ const Calendar = () => {
             </div>
           </Card>
 
-          {/* Enhanced Legend Bar */}
+          {/* Calendar Legend Bar */}
           <Card className="p-4 shadow-xl border backdrop-blur-sm bg-card/95 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-accent/3 pointer-events-none" />
             <div className="flex items-center gap-4 relative z-10">
-              <Button
-                variant={showFilters ? "default" : "outline"}
-                onClick={() => setShowFilters(!showFilters)}
-                className={cn(
-                  "gap-2 shadow-sm transition-all duration-300",
-                  showFilters 
-                    ? "shadow-lg scale-[1.02]" 
-                    : "hover:shadow-md hover:scale-[1.02]"
-                )}
-              >
-                <Filter className={cn(
-                  "h-4 w-4 transition-transform duration-300",
-                  showFilters && "rotate-180"
-                )} />
-                Filters
-              </Button>
-              
-              {!showFilters && (
-                <CalendarLegend 
-                  urgencyFilters={urgencyFilters}
-                  onToggleFilter={(key) => toggleUrgencyFilter(key as keyof typeof urgencyFilters)}
-                  className="flex-1"
-                />
-              )}
+              <CalendarLegend className="flex-1" />
             </div>
           </Card>
-
-          {/* Filters Panel */}
-          {showFilters && (
-            <Card className="p-6 shadow-xl border-2 animate-fade-in">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-display font-semibold">Filter Opportunities</h3>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={resetFilters} className="shadow-sm hover:shadow-md transition-all">
-                    Reset All
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setShowFilters(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Urgency Filters */}
-                <div className="space-y-4">
-                  <h4 className="font-display font-semibold text-sm text-muted-foreground">Urgency Level</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 transition-colors">
-                      <Checkbox
-                        id="filter-critical"
-                        checked={urgencyFilters.critical}
-                        onCheckedChange={() => toggleUrgencyFilter("critical")}
-                      />
-                      <Label htmlFor="filter-critical" className="flex items-center gap-2 cursor-pointer flex-1">
-                        <div className="w-3 h-3 rounded-full bg-urgent shadow-sm"></div>
-                        <span>Critical (0-3 days)</span>
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 transition-colors">
-                      <Checkbox
-                        id="filter-high"
-                        checked={urgencyFilters.high}
-                        onCheckedChange={() => toggleUrgencyFilter("high")}
-                      />
-                      <Label htmlFor="filter-high" className="flex items-center gap-2 cursor-pointer flex-1">
-                        <div className="w-3 h-3 rounded-full bg-warning shadow-sm"></div>
-                        <span>High (4-7 days)</span>
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 transition-colors">
-                      <Checkbox
-                        id="filter-upcoming"
-                        checked={urgencyFilters.upcoming}
-                        onCheckedChange={() => toggleUrgencyFilter("upcoming")}
-                      />
-                      <Label htmlFor="filter-upcoming" className="flex items-center gap-2 cursor-pointer flex-1">
-                        <div className="w-3 h-3 rounded-full bg-success shadow-sm"></div>
-                        <span>Upcoming (8-14 days)</span>
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 transition-colors">
-                      <Checkbox
-                        id="filter-normal"
-                        checked={urgencyFilters.normal}
-                        onCheckedChange={() => toggleUrgencyFilter("normal")}
-                      />
-                      <Label htmlFor="filter-normal" className="flex items-center gap-2 cursor-pointer flex-1">
-                        <div className="w-3 h-3 rounded-full bg-muted shadow-sm"></div>
-                        <span>Normal (14+ days)</span>
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 transition-colors">
-                      <Checkbox
-                        id="filter-expired"
-                        checked={urgencyFilters.expired}
-                        onCheckedChange={() => toggleUrgencyFilter("expired")}
-                      />
-                      <Label htmlFor="filter-expired" className="flex items-center gap-2 cursor-pointer flex-1">
-                        <div className="w-3 h-3 rounded-full bg-expired shadow-sm"></div>
-                        <span>Expired</span>
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator className="md:hidden" />
-
-                {/* Status Filters */}
-                <div className="space-y-4">
-                  <h4 className="font-display font-semibold text-sm text-muted-foreground">Status</h4>
-                  <div className="space-y-3">
-                    {Object.keys(statusFilters).map((status) => (
-                      <div key={status} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 transition-colors">
-                        <Checkbox
-                          id={`filter-status-${status}`}
-                          checked={statusFilters[status as keyof typeof statusFilters]}
-                          onCheckedChange={() => toggleStatusFilter(status as keyof typeof statusFilters)}
-                        />
-                        <Label 
-                          htmlFor={`filter-status-${status}`} 
-                          className="cursor-pointer capitalize flex-1"
-                        >
-                          {status}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          )}
 
           {/* Calendar Display */}
           <Card className="p-6 shadow-xl border-2">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-display font-bold flex items-center gap-3">
                 <CalendarIcon className="h-6 w-6 text-primary" />
-                {viewMode === "day" 
+                {viewMode === "day"
                   ? format(currentDate, "EEEE, MMMM d, yyyy")
-                  : viewMode === "week" 
+                  : viewMode === "week"
                   ? `Week of ${format(weekStart, "MMM d, yyyy")}`
                   : format(currentDate, "MMMM yyyy")}
               </h2>
@@ -1055,409 +650,264 @@ const Calendar = () => {
               </div>
             </div>
 
-            <DndContext
-              sensors={sensors}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              {viewMode === "day" ? (
-                <div className="space-y-4">
-                  {/* Time-based agenda view */}
-                  <div className="border rounded-lg">
-                    <div className="bg-muted/50 p-3 border-b">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold">All Day</span>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDateClick(currentDate)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
+            {viewMode === "day" ? (
+              <div className="space-y-4">
+                {/* Time-based agenda view */}
+                <div className="border rounded-lg">
+                  <div className="bg-muted/50 p-3 border-b">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">All Day</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDateClick(currentDate)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <div className="p-4 space-y-2">
-                      {getOpportunitiesForDay(currentDate).length === 0 && getCalendarEventsForDay(currentDate).length === 0 ? (
-                        <p className="text-muted-foreground text-center py-8">
-                          No events scheduled for this day
-                        </p>
-                      ) : (
-                        <>
-                          {getOpportunitiesForDay(currentDate).map((opp) => {
-                            const urgency = getUrgencyLevel(opp.due_date);
-                            return (
-                              <div
-                                key={opp.id}
-                                className={cn(
-                                  "p-4 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-shadow",
-                                  getUrgencyColor(urgency)
-                                )}
-                                onClick={() => navigate(`/opportunity/${opp.id}`)}
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      {getUrgencyBadge(urgency)}
-                                      <Badge variant="outline" className="text-xs">
-                                        {opp.status || "New"}
-                                      </Badge>
-                                    </div>
-                                    <h3 className="font-semibold text-base mb-1 truncate">
-                                      {opp.title}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                      {opp.agency || "No agency"}
-                                    </p>
-                                  </div>
-                                  {opp.fit_score !== null && (
-                                    <div className="text-right">
-                                      <div className="text-2xl font-bold text-primary">
-                                        {opp.fit_score}%
-                                      </div>
-                                      <div className="text-xs text-muted-foreground">
-                                        Fit Score
-                                      </div>
-                                    </div>
-                                  )}
+                  </div>
+                  <div className="p-4 space-y-2">
+                    {getCalendarEventsForDay(currentDate).length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">
+                        No events scheduled for this day
+                      </p>
+                    ) : (
+                      <>
+                        {getCalendarEventsForDay(currentDate).map((event) => (
+                          <div
+                            key={event.id}
+                            className={cn(
+                              "p-4 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-shadow",
+                              event.event_type === "conference" && "bg-success/10"
+                            )}
+                            style={{
+                              backgroundColor: event.event_type === "conference" ? undefined : `${event.color}10`,
+                              borderLeftColor: event.event_type === "conference" ? "#10b981" : event.color
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEventClick(event);
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="mb-2 flex items-center gap-2">
+                                  <Badge
+                                    variant={event.event_type === "conference" ? "default" : "outline"}
+                                    className="text-xs"
+                                  >
+                                    {event.event_type === "conference" ? "Conference" : event.event_type}
+                                  </Badge>
                                 </div>
+                                <h3 className="font-semibold text-base mb-1">
+                                  {event.title}
+                                </h3>
+                                {event.description && (
+                                  <p className="text-sm text-muted-foreground mb-1">
+                                    {event.description}
+                                  </p>
+                                )}
+                                {event.location && (
+                                  <p className="text-sm text-muted-foreground">
+                                    {event.location}
+                                  </p>
+                                )}
                               </div>
-                            );
-                          })}
-                          {getCalendarEventsForDay(currentDate).map((event) => (
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : viewMode === "week" ? (
+              <div className="grid grid-cols-7 gap-4">
+                {weekDays.map((day) => {
+                  const dayEvents = getCalendarEventsForDay(day);
+                  const isCurrentDay = isToday(day);
+                  const isPastDay = isPast(day) && !isCurrentDay;
+
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      id={format(day, "yyyy-MM-dd")}
+                      className={cn(
+                        "min-h-[400px] border-2 rounded-lg p-3 space-y-2 cursor-pointer",
+                        isCurrentDay && "border-primary bg-primary/5",
+                        isPastDay && "bg-muted/30",
+                        !isCurrentDay && !isPastDay && "border-border"
+                      )}
+                      onClick={() => handleDateClick(day)}
+                    >
+                      <div className="sticky top-0 bg-background/95 backdrop-blur-sm pb-2">
+                        <div className="font-semibold text-sm text-foreground">
+                          {format(day, "EEE")}
+                        </div>
+                        <div className={cn(
+                          "text-2xl font-bold",
+                          isCurrentDay && "text-primary"
+                        )}>
+                          {format(day, "d")}
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {dayEvents.length} items
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-2">
+                        {dayEvents.map((event) => {
+                          const effectiveType = event.type ?? event.event_type;
+                          const EventIcon = getEventIcon(event.icon_name, effectiveType);
+                          const eventColor = getEventColor(event.color_hex, effectiveType);
+                          const eventLabel = getEventTypeLabel(effectiveType, event.type_custom);
+
+                          return (
                             <div
                               key={event.id}
                               className={cn(
-                                "p-4 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-shadow",
-                                event.event_type === "conference" && "bg-success/10"
+                                "p-2 rounded-md border-l-4 text-xs cursor-pointer hover:shadow-md transition-shadow"
                               )}
-                              style={{ 
-                                backgroundColor: event.event_type === "conference" ? undefined : `${event.color}10`,
-                                borderLeftColor: event.event_type === "conference" ? "#10b981" : event.color
+                              style={{
+                                backgroundColor: `${eventColor}15`,
+                                borderLeftColor: eventColor
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEventClick(event);
                               }}
                             >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                  <div className="mb-2 flex items-center gap-2">
-                                    <Badge 
-                                      variant={event.event_type === "conference" ? "default" : "outline"} 
-                                      className="text-xs"
-                                    >
-                                      {event.event_type === "conference" ? "🎯 Conference" : event.event_type}
-                                    </Badge>
-                                  </div>
-                                  <h3 className="font-semibold text-base mb-1">
-                                    {event.title}
-                                  </h3>
-                                  {event.description && (
-                                    <p className="text-sm text-muted-foreground mb-1">
-                                      {event.description}
-                                    </p>
-                                  )}
-                                  {event.location && (
-                                    <p className="text-sm text-muted-foreground">
-                                      📍 {event.location}
-                                    </p>
-                                  )}
-                                </div>
+                              <div className="flex items-center gap-1 mb-1">
+                                <EventIcon className="h-3 w-3" style={{ color: eventColor }} />
+                                <Badge variant="secondary" className="text-[10px] px-1 py-0">{eventLabel}</Badge>
+                                <div className="font-medium truncate flex-1">{event.title}</div>
                               </div>
+                              {event.location && (
+                                <div className="text-muted-foreground truncate">{event.location}</div>
+                              )}
                             </div>
-                          ))}
-                        </>
-                      )}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Month grid header */}
+                <div className="grid grid-cols-7 gap-2 mb-2">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
+                    <div
+                      key={day}
+                      className={cn(
+                        "text-center text-sm font-semibold text-muted-foreground/70 p-2 rounded-lg",
+                        "uppercase tracking-wider",
+                        index === 0 || index === 6 ? "bg-muted/30" : ""
+                      )}
+                    >
+                      {day}
+                    </div>
+                  ))}
                 </div>
-              ) : viewMode === "week" ? (
-                <div className="grid grid-cols-7 gap-4">
-                  {weekDays.map((day) => {
-                    const dayOpportunities = getOpportunitiesForDay(day);
+
+                {/* Month grid */}
+                <div className="grid grid-cols-7 gap-2">
+                  {monthDays.map((day, index) => {
                     const dayEvents = getCalendarEventsForDay(day);
                     const isCurrentDay = isToday(day);
                     const isPastDay = isPast(day) && !isCurrentDay;
+                    const isCurrentMonth = day >= monthStart && day <= monthEnd;
+                    const hasItems = dayEvents.length > 0;
 
                     return (
                       <div
                         key={day.toISOString()}
                         id={format(day, "yyyy-MM-dd")}
                         className={cn(
-                          "min-h-[400px] border-2 rounded-lg p-3 space-y-2 cursor-pointer",
-                          isCurrentDay && "border-primary bg-primary/5",
-                          isPastDay && "bg-muted/30",
-                          !isCurrentDay && !isPastDay && "border-border"
+                          "min-h-[120px] rounded-xl p-2 space-y-1 cursor-pointer",
+                          "border transition-all duration-300 ease-out",
+                          "hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5",
+                          "group relative overflow-hidden",
+                          isCurrentDay && "border-primary border-2 bg-primary/5 shadow-md ring-2 ring-primary/20",
+                          isPastDay && "bg-muted/20 hover:bg-muted/30",
+                          !isCurrentMonth && "opacity-30 hover:opacity-50",
+                          !isCurrentDay && !isPastDay && isCurrentMonth && "border-border/50 hover:border-primary/50 bg-card/50",
+                          hasItems && !isCurrentDay && "border-accent/30"
                         )}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (!draggedItem) return;
-                          const newDate = format(day, "yyyy-MM-dd");
-                          updateDueDateMutation.mutate({ id: draggedItem.id, newDate });
-                        }}
+                        style={{ animationDelay: `${index * 10}ms` }}
                         onClick={() => handleDateClick(day)}
                       >
-                        <div className="sticky top-0 bg-background/95 backdrop-blur-sm pb-2">
-                          <div className="font-semibold text-sm text-foreground">
-                            {format(day, "EEE")}
-                          </div>
-                          <div className={cn(
-                            "text-2xl font-bold",
-                            isCurrentDay && "text-primary"
+                        {/* Hover gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                        {/* Day number */}
+                        <div className={cn(
+                          "text-sm font-bold relative z-10 flex items-center justify-between",
+                          isCurrentDay && "text-primary",
+                          !isCurrentMonth && "text-muted-foreground/50"
+                        )}>
+                          <span className={cn(
+                            "w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200",
+                            isCurrentDay && "bg-primary text-primary-foreground shadow-md",
+                            !isCurrentDay && "group-hover:bg-accent/50"
                           )}>
                             {format(day, "d")}
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {dayOpportunities.length + dayEvents.length} items
-                          </Badge>
+                          </span>
+                          {hasItems && !isCurrentDay && (
+                            <span className="flex gap-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            </span>
+                          )}
                         </div>
 
-                        <div className="space-y-2">
-                          {dayOpportunities.map((opp) => {
-                            const urgency = getUrgencyLevel(opp.due_date);
-                            return (
-                              <div
-                                key={opp.id}
-                                draggable
-                                onDragStart={() => setDraggedItem(opp)}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/opportunity/${opp.id}`);
-                                }}
-                                className={cn(
-                                  "p-2 rounded-md border-l-4 text-xs cursor-move hover:shadow-md transition-shadow",
-                                  getUrgencyColor(urgency)
-                                )}
-                              >
-                                <div className="font-medium truncate mb-1">{opp.title}</div>
-                                {opp.agency && (
-                                  <div className="text-muted-foreground truncate">{opp.agency}</div>
-                                )}
-                                {opp.fit_score !== null && (
-                                  <div className="mt-1">
-                                    <Badge variant="outline" className="text-xs">
-                                      {opp.fit_score}% fit
-                                    </Badge>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                          {dayEvents.map((event) => {
+                        {/* Events list */}
+                        <div className="space-y-1 relative z-10">
+                          {dayEvents.slice(0, 2).map((event, eventIndex) => {
                             const effectiveType = event.type ?? event.event_type;
-                            const EventIcon = getEventIcon(event.icon_name, effectiveType);
                             const eventColor = getEventColor(event.color_hex, effectiveType);
-                            const eventLabel = getEventTypeLabel(effectiveType, event.type_custom);
-                            
+                            const EventIcon = getEventIcon(event.icon_name, effectiveType);
+
                             return (
                               <div
                                 key={event.id}
                                 className={cn(
-                                  "p-2 rounded-md border-l-4 text-xs cursor-pointer hover:shadow-md transition-shadow"
+                                  "text-xs p-1.5 rounded-md truncate cursor-pointer flex items-center gap-1",
+                                  "transition-all duration-200 ease-out",
+                                  "hover:shadow-md hover:scale-[1.03]",
+                                  "animate-fade-in"
                                 )}
-                                style={{ 
-                                  backgroundColor: `${eventColor}15`,
-                                  borderLeftColor: eventColor
+                                style={{
+                                  backgroundColor: `${eventColor}20`,
+                                  borderLeft: `3px solid ${eventColor}`,
+                                  color: eventColor,
+                                  animationDelay: `${eventIndex * 50}ms`
                                 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleEventClick(event);
                                 }}
                               >
-                                <div className="flex items-center gap-1 mb-1">
-                                  <EventIcon className="h-3 w-3" style={{ color: eventColor }} />
-                                  <Badge variant="secondary" className="text-[10px] px-1 py-0">{eventLabel}</Badge>
-                                  <div className="font-medium truncate flex-1">{event.title}</div>
-                                </div>
-                                {event.location && (
-                                  <div className="text-muted-foreground truncate">📍 {event.location}</div>
-                                )}
+                                <EventIcon className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{event.title}</span>
                               </div>
                             );
                           })}
+                          {dayEvents.length > 2 && (
+                            <div className={cn(
+                              "text-xs text-muted-foreground text-center py-0.5 rounded-md",
+                              "bg-muted/50 group-hover:bg-primary/10 transition-colors"
+                            )}>
+                              +{dayEvents.length - 2} more
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {/* Month grid header */}
-                  <div className="grid grid-cols-7 gap-2 mb-2">
-                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
-                      <div 
-                        key={day} 
-                        className={cn(
-                          "text-center text-sm font-semibold text-muted-foreground/70 p-2 rounded-lg",
-                          "uppercase tracking-wider",
-                          index === 0 || index === 6 ? "bg-muted/30" : ""
-                        )}
-                      >
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Month grid */}
-                  <div className="grid grid-cols-7 gap-2">
-                    {monthDays.map((day, index) => {
-                      const dayOpportunities = getOpportunitiesForDay(day);
-                      const dayEvents = getCalendarEventsForDay(day);
-                      const isCurrentDay = isToday(day);
-                      const isPastDay = isPast(day) && !isCurrentDay;
-                      const isCurrentMonth = day >= monthStart && day <= monthEnd;
-                      const hasItems = dayOpportunities.length > 0 || dayEvents.length > 0;
-
-                      return (
-                        <div
-                          key={day.toISOString()}
-                          id={format(day, "yyyy-MM-dd")}
-                          className={cn(
-                            "min-h-[120px] rounded-xl p-2 space-y-1 cursor-pointer",
-                            "border transition-all duration-300 ease-out",
-                            "hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5",
-                            "group relative overflow-hidden",
-                            isCurrentDay && "border-primary border-2 bg-primary/5 shadow-md ring-2 ring-primary/20",
-                            isPastDay && "bg-muted/20 hover:bg-muted/30",
-                            !isCurrentMonth && "opacity-30 hover:opacity-50",
-                            !isCurrentDay && !isPastDay && isCurrentMonth && "border-border/50 hover:border-primary/50 bg-card/50",
-                            hasItems && !isCurrentDay && "border-accent/30"
-                          )}
-                          style={{ animationDelay: `${index * 10}ms` }}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.currentTarget.classList.add('ring-2', 'ring-primary', 'bg-primary/10');
-                          }}
-                          onDragLeave={(e) => {
-                            e.currentTarget.classList.remove('ring-2', 'ring-primary', 'bg-primary/10');
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            e.currentTarget.classList.remove('ring-2', 'ring-primary', 'bg-primary/10');
-                            if (!draggedItem) return;
-                            const newDate = format(day, "yyyy-MM-dd");
-                            updateDueDateMutation.mutate({ id: draggedItem.id, newDate });
-                          }}
-                          onClick={() => handleDateClick(day)}
-                        >
-                          {/* Hover gradient overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                          
-                          {/* Day number */}
-                          <div className={cn(
-                            "text-sm font-bold relative z-10 flex items-center justify-between",
-                            isCurrentDay && "text-primary",
-                            !isCurrentMonth && "text-muted-foreground/50"
-                          )}>
-                            <span className={cn(
-                              "w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200",
-                              isCurrentDay && "bg-primary text-primary-foreground shadow-md",
-                              !isCurrentDay && "group-hover:bg-accent/50"
-                            )}>
-                              {format(day, "d")}
-                            </span>
-                            {hasItems && !isCurrentDay && (
-                              <span className="flex gap-0.5">
-                                {dayOpportunities.length > 0 && (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-urgent animate-pulse" />
-                                )}
-                                {dayEvents.length > 0 && (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                                )}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Events list */}
-                          <div className="space-y-1 relative z-10">
-                            {dayOpportunities.slice(0, 2).map((opp, oppIndex) => {
-                              const urgency = getUrgencyLevel(opp.due_date);
-                              return (
-                                <div
-                                  key={opp.id}
-                                  draggable
-                                  onDragStart={(e) => {
-                                    e.stopPropagation();
-                                    setDraggedItem(opp);
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/opportunity/${opp.id}`);
-                                  }}
-                                  className={cn(
-                                    "text-xs p-1.5 rounded-md truncate cursor-move border-l-3",
-                                    "transition-all duration-200 ease-out",
-                                    "hover:shadow-md hover:scale-[1.03] hover:-translate-x-0.5",
-                                    "animate-fade-in",
-                                    getUrgencyColor(urgency)
-                                  )}
-                                  style={{ 
-                                    animationDelay: `${oppIndex * 50}ms`,
-                                    borderLeftWidth: '3px'
-                                  }}
-                                >
-                                  {opp.title}
-                                </div>
-                              );
-                            })}
-                            {dayEvents.slice(0, 2 - dayOpportunities.slice(0, 2).length).map((event, eventIndex) => {
-                              const effectiveType = event.type ?? event.event_type;
-                              const eventColor = getEventColor(event.color_hex, effectiveType);
-                              const EventIcon = getEventIcon(event.icon_name, effectiveType);
-                              
-                              return (
-                                <div
-                                  key={event.id}
-                                  className={cn(
-                                    "text-xs p-1.5 rounded-md truncate cursor-pointer flex items-center gap-1",
-                                    "transition-all duration-200 ease-out",
-                                    "hover:shadow-md hover:scale-[1.03]",
-                                    "animate-fade-in"
-                                  )}
-                                  style={{ 
-                                    backgroundColor: `${eventColor}20`,
-                                    borderLeft: `3px solid ${eventColor}`,
-                                    color: eventColor,
-                                    animationDelay: `${eventIndex * 50}ms`
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEventClick(event);
-                                  }}
-                                >
-                                  <EventIcon className="h-3 w-3 flex-shrink-0" />
-                                  <span className="truncate">{event.title}</span>
-                                </div>
-                              );
-                            })}
-                            {(dayOpportunities.length + dayEvents.length) > 2 && (
-                              <div className={cn(
-                                "text-xs text-muted-foreground text-center py-0.5 rounded-md",
-                                "bg-muted/50 group-hover:bg-primary/10 transition-colors"
-                              )}>
-                                +{(dayOpportunities.length + dayEvents.length) - 2} more
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <DragOverlay>
-                {draggedItem && (
-                  <div className="p-3 rounded-md border bg-card shadow-lg opacity-80">
-                    <div className="font-medium text-sm">{draggedItem.title}</div>
-                    {draggedItem.agency && (
-                      <div className="text-xs text-muted-foreground">{draggedItem.agency}</div>
-                    )}
-                  </div>
-                )}
-              </DragOverlay>
-            </DndContext>
+              </div>
+            )}
           </Card>
         </div>
       </div>
@@ -1476,51 +926,16 @@ const Calendar = () => {
           </DialogHeader>
 
           {selectedDay && (() => {
-            const dayOpps = getOpportunitiesForDay(selectedDay);
             const dayEvts = getCalendarEventsForDay(selectedDay);
-            const totalItems = dayOpps.length + dayEvts.length;
 
             return (
               <div className="space-y-3 mt-2">
-                {totalItems === 0 ? (
+                {dayEvts.length === 0 ? (
                   <p className="text-muted-foreground text-center py-6 text-sm">
                     No events scheduled for this day
                   </p>
                 ) : (
                   <>
-                    {dayOpps.map((opp) => {
-                      const urgency = getUrgencyLevel(opp.due_date);
-                      return (
-                        <div
-                          key={opp.id}
-                          className={cn(
-                            "p-3 rounded-lg border-l-4 cursor-pointer",
-                            "hover:shadow-md transition-all duration-200",
-                            getUrgencyColor(urgency)
-                          )}
-                          onClick={() => {
-                            setShowDayEventsDialog(false);
-                            navigate(`/opportunity/${opp.id}`);
-                          }}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            {getUrgencyBadge(urgency)}
-                            <Badge variant="outline" className="text-xs">
-                              {opp.status || "New"}
-                            </Badge>
-                            {opp.fit_score !== null && (
-                              <Badge variant="secondary" className="text-xs ml-auto">
-                                {opp.fit_score}% fit
-                              </Badge>
-                            )}
-                          </div>
-                          <h4 className="font-semibold text-sm">{opp.title}</h4>
-                          {opp.agency && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{opp.agency}</p>
-                          )}
-                        </div>
-                      );
-                    })}
                     {dayEvts.map((event) => {
                       const effectiveType = event.type ?? event.event_type;
                       const eventColor = getEventColor(event.color_hex, effectiveType);
@@ -1549,7 +964,7 @@ const Calendar = () => {
                           </div>
                           <h4 className="font-semibold text-sm">{event.title}</h4>
                           {event.location && (
-                            <p className="text-xs text-muted-foreground mt-0.5">📍 {event.location}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{event.location}</p>
                           )}
                           {event.description && (
                             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{event.description}</p>
@@ -1577,187 +992,129 @@ const Calendar = () => {
       <Dialog open={showQuickAdd} onOpenChange={setShowQuickAdd}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Quick Add Event</DialogTitle>
+            <DialogTitle>Add Event</DialogTitle>
             <DialogDescription>
               Create a new event for {quickAddDate && format(quickAddDate, "MMMM d, yyyy")}
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs
-            value={newEventType}
-            onValueChange={(v) => setNewEventType(v as "opportunity" | "custom")}
-            className="w-full mt-4"
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="opportunity">Opportunity</TabsTrigger>
-              <TabsTrigger value="custom">Custom Event</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="opportunity" className="space-y-4 mt-4">
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="event-type">Event Type *</Label>
+              <Select value={customEventType} onValueChange={setCustomEventType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="travel">Travel</SelectItem>
+                  <SelectItem value="meeting">Meeting</SelectItem>
+                  <SelectItem value="reminder">Reminder</SelectItem>
+                  <SelectItem value="personal">Personal</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="custom-title">Title *</Label>
+              <Input
+                id="custom-title"
+                placeholder="e.g., Travel to DC for meeting"
+                value={newEventTitle}
+                onChange={(e) => setNewEventTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                placeholder="e.g., Washington, DC"
+                value={customEventLocation}
+                onChange={(e) => setCustomEventLocation(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Send Invite To (Email)</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                placeholder="e.g., colleague@company.com"
+                value={customEventInviteEmail}
+                onChange={(e) => setCustomEventInviteEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to send to yourself
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
-                <Input
-                  id="title"
-                  placeholder="Enter opportunity title"
-                  value={newEventTitle}
-                  onChange={(e) => setNewEventTitle(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="agency">Agency</Label>
-                <Input
-                  id="agency"
-                  placeholder="Enter agency name"
-                  value={newEventAgency}
-                  onChange={(e) => setNewEventAgency(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="synopsis">Description</Label>
-                <Textarea
-                  id="synopsis"
-                  placeholder="Enter opportunity description"
-                  value={newEventSynopsis}
-                  onChange={(e) => setNewEventSynopsis(e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={newEventStatus} onValueChange={setNewEventStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new">New</SelectItem>
-                    <SelectItem value="pursuing">Pursuing</SelectItem>
-                    <SelectItem value="bidding">Bidding</SelectItem>
-                    <SelectItem value="submitted">Submitted</SelectItem>
-                    <SelectItem value="won">Won</SelectItem>
-                    <SelectItem value="lost">Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="custom" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="event-type">Event Type *</Label>
-                <Select value={customEventType} onValueChange={setCustomEventType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="travel">✈️ Travel</SelectItem>
-                    <SelectItem value="meeting">📅 Meeting</SelectItem>
-                    <SelectItem value="reminder">🔔 Reminder</SelectItem>
-                    <SelectItem value="personal">👤 Personal</SelectItem>
-                    <SelectItem value="other">📝 Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="custom-title">Title *</Label>
-                <Input
-                  id="custom-title"
-                  placeholder="e.g., Travel to DC for meeting"
-                  value={newEventTitle}
-                  onChange={(e) => setNewEventTitle(e.target.value)}
-                />
+                <Label htmlFor="start-date">Start Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !customEventStartDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customEventStartDate ? format(customEventStartDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker
+                      mode="single"
+                      selected={customEventStartDate || undefined}
+                      onSelect={(date) => {
+                        setCustomEventStartDate(date || null);
+                        // Clear end date if it's before the new start date
+                        if (customEventEndDate && date && customEventEndDate < date) {
+                          setCustomEventEndDate(null);
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  placeholder="e.g., Washington, DC"
-                  value={customEventLocation}
-                  onChange={(e) => setCustomEventLocation(e.target.value)}
-                />
+                <Label htmlFor="end-date">End Date (Optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !customEventEndDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customEventEndDate ? format(customEventEndDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker
+                      mode="single"
+                      selected={customEventEndDate || undefined}
+                      onSelect={(date) => setCustomEventEndDate(date || null)}
+                      disabled={(date) => (customEventStartDate ? date < customEventStartDate : false)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="invite-email">Send Invite To (Email)</Label>
-                <Input
-                  id="invite-email"
-                  type="email"
-                  placeholder="e.g., colleague@company.com"
-                  value={customEventInviteEmail}
-                  onChange={(e) => setCustomEventInviteEmail(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave blank to send to yourself
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start-date">Start Date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !customEventStartDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customEventStartDate ? format(customEventStartDate, "PPP") : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarPicker
-                        mode="single"
-                        selected={customEventStartDate || undefined}
-                        onSelect={(date) => {
-                          setCustomEventStartDate(date || null);
-                          // Clear end date if it's before the new start date
-                          if (customEventEndDate && date && customEventEndDate < date) {
-                            setCustomEventEndDate(null);
-                          }
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end-date">End Date (Optional)</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !customEventEndDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customEventEndDate ? format(customEventEndDate, "PPP") : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarPicker
-                        mode="single"
-                        selected={customEventEndDate || undefined}
-                        onSelect={(date) => setCustomEventEndDate(date || null)}
-                        disabled={(date) => (customEventStartDate ? date < customEventStartDate : false)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Add notes about this event"
-                  value={customEventDescription}
-                  onChange={(e) => setCustomEventDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Add notes about this event"
+                value={customEventDescription}
+                onChange={(e) => setCustomEventDescription(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setShowQuickAdd(false)}>
@@ -1765,18 +1122,9 @@ const Calendar = () => {
             </Button>
             <Button
               onClick={handleQuickAdd}
-              disabled={
-                !newEventTitle ||
-                (newEventType === "opportunity"
-                  ? createOpportunityMutation.isPending
-                  : createCalendarEventMutation.isPending)
-              }
+              disabled={!newEventTitle || createCalendarEventMutation.isPending}
             >
-              {(newEventType === "opportunity"
-                ? createOpportunityMutation.isPending
-                : createCalendarEventMutation.isPending)
-                ? "Creating..."
-                : `Create ${newEventType === "opportunity" ? "Opportunity" : "Event"}`}
+              {createCalendarEventMutation.isPending ? "Creating..." : "Create Event"}
             </Button>
           </div>
         </DialogContent>
@@ -1798,7 +1146,7 @@ const Calendar = () => {
                 <EventTypeSelector
                   type={selectedEvent.type}
                   typeCustom={selectedEvent.type_custom}
-                  onChange={(type, typeCustom) => 
+                  onChange={(type, typeCustom) =>
                     setSelectedEvent({...selectedEvent, type, type_custom: typeCustom})
                   }
                 />
@@ -1877,9 +1225,9 @@ const Calendar = () => {
                       disabled={!selectedEvent.invite_email || sendCalendarInviteMutation.isPending}
                       onClick={() => {
                         if (selectedEvent?.invite_email) {
-                          sendCalendarInviteMutation.mutate({ 
-                            eventId: selectedEvent.id, 
-                            email: selectedEvent.invite_email 
+                          sendCalendarInviteMutation.mutate({
+                            eventId: selectedEvent.id,
+                            email: selectedEvent.invite_email
                           });
                         }
                       }}
@@ -1944,7 +1292,7 @@ const Calendar = () => {
                           selected={selectedEvent.end_date ? parseDateLocal(selectedEvent.end_date) : undefined}
                           onSelect={(date) => {
                             setSelectedEvent({
-                              ...selectedEvent, 
+                              ...selectedEvent,
                               end_date: date ? format(date, "yyyy-MM-dd") : null
                             });
                           }}

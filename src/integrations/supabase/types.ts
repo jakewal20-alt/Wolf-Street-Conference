@@ -874,6 +874,95 @@ export type Database = {
           },
         ]
       }
+      conference_share_links: {
+        Row: {
+          id: string
+          conference_id: string
+          token: string
+          created_by: string
+          expires_at: string | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conference_id: string
+          token: string
+          created_by: string
+          expires_at?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conference_id?: string
+          token?: string
+          created_by?: string
+          expires_at?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conference_share_links_conference_id_fkey"
+            columns: ["conference_id"]
+            isOneToOne: false
+            referencedRelation: "conferences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conference_voice_recaps: {
+        Row: {
+          id: string
+          conference_id: string
+          lead_id: string | null
+          recorded_by: string
+          audio_url: string | null
+          transcript: string | null
+          ai_summary: string | null
+          duration_seconds: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conference_id: string
+          lead_id?: string | null
+          recorded_by: string
+          audio_url?: string | null
+          transcript?: string | null
+          ai_summary?: string | null
+          duration_seconds?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conference_id?: string
+          lead_id?: string | null
+          recorded_by?: string
+          audio_url?: string | null
+          transcript?: string | null
+          ai_summary?: string | null
+          duration_seconds?: number | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conference_voice_recaps_conference_id_fkey"
+            columns: ["conference_id"]
+            isOneToOne: false
+            referencedRelation: "conferences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conference_voice_recaps_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "conference_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conference_leads: {
         Row: {
           ai_fit_score: number | null

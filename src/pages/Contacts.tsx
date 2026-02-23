@@ -215,18 +215,10 @@ export default function Contacts() {
         <div>
           <h1 className="text-2xl font-bold">Contacts</h1>
           <p className="text-muted-foreground">
-            Track your relationships with primes and agencies
+            Manage your conference contacts and relationships
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={fetchLinkedInProfiles}
-            disabled={isFetchingLinkedIn || !contacts?.length}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetchingLinkedIn ? 'animate-spin' : ''}`} />
-            {isFetchingLinkedIn ? 'Fetching...' : 'Fetch LinkedIn'}
-          </Button>
           <Button variant="outline" onClick={() => setIsBusinessCardOpen(true)}>
             <Camera className="h-4 w-4 mr-2" />
             Scan Card

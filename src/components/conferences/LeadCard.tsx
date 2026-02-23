@@ -1,9 +1,8 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Eye, Mail, Phone, Building2, Sparkles, Trash2, Pencil } from "lucide-react";
+import { Eye, Mail, Phone, Building2, Sparkles, Trash2, Pencil } from "lucide-react";
 import { useState } from "react";
-import { PromoteToOpportunityDialog } from "./PromoteToOpportunityDialog";
 import { LeadDetailDialog } from "./LeadDetailDialog";
 import { EditLeadDialog } from "./EditLeadDialog";
 import {
@@ -26,7 +25,6 @@ interface LeadCardProps {
 }
 
 export function LeadCard({ lead, conferenceId }: LeadCardProps) {
-  const [showPromoteDialog, setShowPromoteDialog] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -38,7 +36,7 @@ export function LeadCard({ lead, conferenceId }: LeadCardProps) {
         .from("conference_leads")
         .delete()
         .eq("id", lead.id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -61,7 +59,7 @@ export function LeadCard({ lead, conferenceId }: LeadCardProps) {
                 <h4 className="font-semibold">{lead.contact_name}</h4>
                 {lead.source === "business_card" && (
                   <Badge variant="outline" className="text-xs">
-                    📇 Card
+                    Card
                   </Badge>
                 )}
               </div>
@@ -122,16 +120,6 @@ export function LeadCard({ lead, conferenceId }: LeadCardProps) {
             >
               <Pencil className="w-3 h-3" />
             </Button>
-            {lead.status !== "converted" && (
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={() => setShowPromoteDialog(true)}
-              >
-                <ArrowRight className="w-3 h-3 mr-1" />
-                Promote
-              </Button>
-            )}
             <Button
               variant="ghost"
               size="sm"
@@ -143,12 +131,6 @@ export function LeadCard({ lead, conferenceId }: LeadCardProps) {
         </CardContent>
       </Card>
 
-      <PromoteToOpportunityDialog
-        open={showPromoteDialog}
-        onOpenChange={setShowPromoteDialog}
-        lead={lead}
-        conferenceId={conferenceId}
-      />
       <LeadDetailDialog
         open={showDetailDialog}
         onOpenChange={setShowDetailDialog}

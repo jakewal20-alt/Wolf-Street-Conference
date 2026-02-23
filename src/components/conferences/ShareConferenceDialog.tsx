@@ -2,12 +2,15 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { UserPlus, Loader2, Check, X, Users } from "lucide-react";
+import { UserPlus, Loader2, Check, X, Users, Link2, Copy, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 
 interface ShareConferenceDialogProps {
   open: boolean;
@@ -24,6 +27,7 @@ export function ShareConferenceDialog({
 }: ShareConferenceDialogProps) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch all users (from profiles) except current user
@@ -60,6 +64,23 @@ export function ShareConferenceDialog({
     enabled: open,
   });
 
+  // Fetch existing share link
+  const { data: shareLink } = useQuery({
+    queryKey: ["conference-share-link", conferenceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("conference_share_links")
+        .select("*")
+        .eq("conference_id", conferenceId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
   const handleShare = async () => {
     if (!selectedUserId) {
       toast.error("Please select a user to share with");
@@ -91,11 +112,11 @@ export function ShareConferenceDialog({
       }
 
       toast.success("Conference shared successfully", {
-        description: "Your partner can now add leads and business cards",
+        description: "Your partner can now see all leads, recaps, and notes",
       });
 
       queryClient.invalidateQueries({ queryKey: ["conference-collaborators", conferenceId] });
-      onOpenChange(false);
+      queryClient.invalidateQueries({ queryKey: ["conference-collaborator-count", conferenceId] });
       setSelectedUserId(null);
     } catch (error) {
       console.error("Error sharing conference:", error);
@@ -117,10 +138,65 @@ export function ShareConferenceDialog({
 
       toast.success("Access removed");
       queryClient.invalidateQueries({ queryKey: ["conference-collaborators", conferenceId] });
+      queryClient.invalidateQueries({ queryKey: ["conference-collaborator-count", conferenceId] });
     } catch (error) {
       console.error("Error removing collaborator:", error);
       toast.error("Failed to remove access");
     }
+  };
+
+  const handleGenerateLink = async () => {
+    setIsGeneratingLink(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Generate a random token
+      const token = crypto.randomUUID().replace(/-/g, "");
+
+      const { error } = await supabase
+        .from("conference_share_links")
+        .insert({
+          conference_id: conferenceId,
+          token,
+          created_by: user.id,
+        });
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["conference-share-link", conferenceId] });
+      toast.success("Share link generated");
+    } catch (error) {
+      console.error("Error generating link:", error);
+      toast.error("Failed to generate share link");
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const handleToggleLink = async (active: boolean) => {
+    if (!shareLink) return;
+    try {
+      const { error } = await supabase
+        .from("conference_share_links")
+        .update({ is_active: active })
+        .eq("id", shareLink.id);
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ["conference-share-link", conferenceId] });
+      toast.success(active ? "Link reactivated" : "Link disabled");
+    } catch (error) {
+      console.error("Error toggling link:", error);
+      toast.error("Failed to update link");
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (!shareLink) return;
+    const url = `${window.location.origin}/shared/${shareLink.token}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied to clipboard");
   };
 
   const availableUsers = users?.filter(u => !existingCollaborators?.includes(u.id)) || [];
@@ -128,14 +204,14 @@ export function ShareConferenceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-primary" />
             Share Conference
           </DialogTitle>
           <DialogDescription>
-            Share "{conferenceName}" with a partner so they can add leads and business cards.
+            Share "{conferenceName}" with partners or generate a read-only link.
           </DialogDescription>
         </DialogHeader>
 
@@ -172,12 +248,12 @@ export function ShareConferenceDialog({
               </div>
             ) : availableUsers.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">
-                {users?.length === 0 
-                  ? "No other users in Wolf Street yet" 
+                {users?.length === 0
+                  ? "No other users in Wolf Street yet"
                   : "All users already have access"}
               </p>
             ) : (
-              <ScrollArea className="h-[200px] border rounded-md">
+              <ScrollArea className="h-[160px] border rounded-md">
                 <div className="p-2 space-y-1">
                   {availableUsers.map((user) => (
                     <button
@@ -203,32 +279,77 @@ export function ShareConferenceDialog({
                 </div>
               </ScrollArea>
             )}
+
+            {selectedUserId && (
+              <Button
+                onClick={handleShare}
+                disabled={isSharing}
+                className="w-full"
+              >
+                {isSharing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <UserPlus className="w-4 h-4 mr-2" />
+                )}
+                Share Access
+              </Button>
+            )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSharing}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleShare}
-              disabled={isSharing || !selectedUserId}
-            >
-              {isSharing ? (
-                <>
+          <Separator />
+
+          {/* Shareable Link Section */}
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2">
+              <Link2 className="w-4 h-4" />
+              Read-Only Share Link
+            </Label>
+
+            {shareLink ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={`${window.location.origin}/shared/${shareLink.token}`}
+                    readOnly
+                    className="text-xs"
+                  />
+                  <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Anyone with this link can view (read-only)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Active</span>
+                    <Switch
+                      checked={shareLink.is_active}
+                      onCheckedChange={handleToggleLink}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handleGenerateLink}
+                disabled={isGeneratingLink}
+                className="w-full"
+              >
+                {isGeneratingLink ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sharing...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Share Access
-                </>
-              )}
+                ) : (
+                  <Link2 className="w-4 h-4 mr-2" />
+                )}
+                Generate Share Link
+              </Button>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Done
             </Button>
           </div>
         </div>
@@ -236,4 +357,3 @@ export function ShareConferenceDialog({
     </Dialog>
   );
 }
-

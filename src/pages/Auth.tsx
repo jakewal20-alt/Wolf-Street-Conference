@@ -198,7 +198,7 @@ export default function Auth() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-4">Wolf Street</h1>
           <p className="text-muted-foreground">
-            Your AI-powered business development assistant
+            Conference intelligence for your team
           </p>
         </div>
 
