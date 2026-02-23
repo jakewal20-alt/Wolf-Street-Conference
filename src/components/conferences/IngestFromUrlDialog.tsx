@@ -123,14 +123,14 @@ export function IngestFromUrlDialog({ open, onOpenChange }: IngestFromUrlDialogP
 
   const handleSave = async () => {
     if (!editedData) return;
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // The conference was already created by the edge function
-      // But we need to update it with any user edits and get the conference ID
-      const { data: updatedConference, error } = await supabase
+      // Try to update existing conference (created by edge function)
+      let updatedConference: any = null;
+      const { data: existing, error: updateError } = await supabase
         .from('conferences')
         .update({
           name: editedData.name,
@@ -141,14 +141,34 @@ export function IngestFromUrlDialog({ open, onOpenChange }: IngestFromUrlDialogP
           tags: editedData.tags,
         })
         .eq('source_url', url)
-        .eq('created_by', user.id)
         .select()
-        .single();
-      
-      if (error) {
-        console.error("Error updating conference:", error);
-        toast.error("Failed to save changes: " + error.message);
-        return;
+        .maybeSingle();
+
+      if (existing) {
+        updatedConference = existing;
+      } else {
+        // Edge function didn't create it or RLS blocked — insert directly
+        const { data: newConf, error: insertError } = await supabase
+          .from('conferences')
+          .insert({
+            name: editedData.name,
+            start_date: editedData.start_date || format(new Date(), "yyyy-MM-dd"),
+            end_date: editedData.end_date || format(new Date(), "yyyy-MM-dd"),
+            location: editedData.location || "TBD",
+            description: editedData.short_description,
+            tags: editedData.tags,
+            source_url: url,
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error("Error creating conference:", insertError);
+          toast.error("Failed to save conference: " + insertError.message);
+          return;
+        }
+        updatedConference = newConf;
       }
       
       // Auto-create or update calendar event with travel days
