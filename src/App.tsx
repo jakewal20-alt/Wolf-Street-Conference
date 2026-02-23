@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import SharedConference from "./pages/SharedConference";
+import AdminUsers from "./pages/AdminUsers";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
                             <Route path="/calendar" element={<Calendar />} />
                             <Route path="/contacts" element={<Contacts />} />
                             <Route path="/settings" element={<Settings />} />
+                            <Route path="/admin/users" element={<AdminUsers />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </PageTransition>

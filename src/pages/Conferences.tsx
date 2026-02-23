@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Users, Download, ExternalLink, CalendarDays, Trash2, Mail, Loader2, Archive, ArchiveRestore, Pencil } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Download, ExternalLink, CalendarDays, Trash2, Mail, Loader2, Archive, ArchiveRestore, Pencil, ChevronDown, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -31,6 +31,7 @@ import { IngestFromUrlDialog } from "@/components/conferences/IngestFromUrlDialo
 import { EditConferenceDialog } from "@/components/conferences/EditConferenceDialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageLayout, PageHeader } from "@/components/PageLayout";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function Conferences() {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ export default function Conferences() {
   const [conferenceToDelete, setConferenceToDelete] = useState<string | null>(null);
   const [conferenceToEdit, setConferenceToEdit] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [showPast, setShowPast] = useState(false);
 
   const archiveConferenceMutation = useMutation({
     mutationFn: async ({ conferenceId, archived }: { conferenceId: string; archived: boolean }) => {
@@ -219,9 +221,127 @@ export default function Conferences() {
 
   const selectedConference = conferences?.find(c => c.id === selectedConferenceId);
   
-  // Filter conferences based on archived state
-  const visibleConferences = conferences?.filter(c => showArchived ? c.archived : !c.archived);
-  const archivedCount = conferences?.filter(c => c.archived).length || 0;
+  // Split conferences into active, past, and archived
+  const nonArchived = conferences?.filter(c => !c.archived) || [];
+  const activeConferences = nonArchived.filter(c => {
+    const status = getConferenceStatus(c.start_date, c.end_date);
+    return !status.isPast;
+  });
+  const pastConferences = nonArchived.filter(c => {
+    const status = getConferenceStatus(c.start_date, c.end_date);
+    return status.isPast;
+  });
+  const archivedConferences = conferences?.filter(c => c.archived) || [];
+  const archivedCount = archivedConferences.length;
+
+  const renderConferenceCard = (conference: any) => {
+    const status = getConferenceStatus(conference.start_date, conference.end_date);
+    const leadsCount = conference.conference_leads?.[0]?.count || 0;
+    const isSelected = conference.id === selectedConferenceId;
+
+    return (
+      <Card
+        key={conference.id}
+        className={`cursor-pointer transition-all duration-200 border-l-4 ${
+          isSelected
+            ? "ring-2 ring-primary shadow-lg bg-primary/5 border-l-primary"
+            : status.isPast
+              ? "opacity-60 hover:opacity-80 border-l-muted-foreground/30 hover:shadow-sm"
+              : status.isActive
+                ? "border-l-success shadow-md hover:shadow-lg bg-success/5"
+                : "border-l-primary hover:shadow-md hover:border-l-primary"
+        }`}
+        onClick={() => setSelectedConferenceId(conference.id)}
+      >
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className={`text-base sm:text-lg ${status.isPast ? "text-muted-foreground" : ""}`}>
+                  {conference.name}
+                </CardTitle>
+                {conference.is_shared && conference.owner_name && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    {conference.owner_name}
+                  </Badge>
+                )}
+                {conference.source_url && (
+                  <Badge variant="secondary" className="text-xs">Imported</Badge>
+                )}
+              </div>
+              <CardDescription className={`mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm ${status.isPast ? "text-muted-foreground/70" : ""}`}>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {format(parseDateLocal(conference.start_date), "MMM d")} -{" "}
+                  {format(parseDateLocal(conference.end_date), "MMM d, yyyy")}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {conference.location}
+                </span>
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Badge className={`text-xs ${status.className}`}>{status.label}</Badge>
+              <Button variant="ghost" size="icon" className="h-8 w-8"
+                onClick={(e) => { e.stopPropagation(); navigate('/calendar'); }}
+                title="View in Calendar"
+              >
+                <CalendarDays className="w-4 h-4" />
+              </Button>
+              {conference.source_url && (
+                <Button variant="ghost" size="icon" className="h-8 w-8"
+                  onClick={(e) => { e.stopPropagation(); window.open(conference.source_url, '_blank'); }}
+                  title="Open conference website"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </Button>
+              )}
+              {!conference.is_shared && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={(e) => { e.stopPropagation(); setConferenceToEdit(conference.id); }}
+                    title="Edit conference"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      archiveConferenceMutation.mutate({ conferenceId: conference.id, archived: !conference.archived });
+                    }}
+                    title={conference.archived ? "Restore conference" : "Archive conference"}
+                  >
+                    {conference.archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={(e) => { e.stopPropagation(); setConferenceToDelete(conference.id); }}
+                    title="Delete conference"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Users className="w-4 h-4" />
+            <span>{leadsCount} {leadsCount === 1 ? "lead" : "leads"}</span>
+          </div>
+          {conference.tags && conference.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {conference.tags.map((tag: string, idx: number) => (
+                <Badge key={idx} variant="outline" className="text-xs">{tag}</Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <PageLayout>
@@ -251,238 +371,95 @@ export default function Conferences() {
         </CardContent>
       </Card>
 
-      {/* Conference List */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-semibold">
-              {showArchived ? "Archived Conferences" : "My Conferences"}
-            </h2>
-            {archivedCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowArchived(!showArchived)}
-                className="text-muted-foreground"
-              >
-                {showArchived ? (
-                  <>
-                    <Calendar className="w-4 h-4 mr-1" />
-                    View Active
-                  </>
-                ) : (
-                  <>
-                    <Archive className="w-4 h-4 mr-1" />
-                    View Archived ({archivedCount})
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowImportDialog(true)}
-              className="flex-1 sm:flex-none"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Import from Calendar</span>
-              <span className="sm:hidden">Import</span>
-            </Button>
-            <Button 
-              size="sm"
-              onClick={() => setShowAddDialog(true)}
-              className="flex-1 sm:flex-none"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Conference
-            </Button>
-          </div>
+      {/* Header + Actions */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h2 className="text-2xl font-semibold">My Conferences</h2>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowImportDialog(true)}
+            className="flex-1 sm:flex-none"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Import from Calendar</span>
+            <span className="sm:hidden">Import</span>
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setShowAddDialog(true)}
+            className="flex-1 sm:flex-none"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Conference
+          </Button>
         </div>
-
-        {isLoading ? (
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-muted-foreground">Loading conferences...</p>
-            </CardContent>
-          </Card>
-        ) : visibleConferences && visibleConferences.length > 0 ? (
-          <div className="space-y-3">
-            {visibleConferences.map((conference) => {
-              const status = getConferenceStatus(conference.start_date, conference.end_date);
-              const leadsCount = conference.conference_leads?.[0]?.count || 0;
-              const isSelected = conference.id === selectedConferenceId;
-
-              return (
-                <Card
-                  key={conference.id}
-                  className={`cursor-pointer transition-all duration-200 border-l-4 ${
-                    isSelected 
-                      ? "ring-2 ring-primary shadow-lg bg-primary/5 border-l-primary" 
-                      : status.isPast 
-                        ? "opacity-60 hover:opacity-80 border-l-muted-foreground/30 hover:shadow-sm" 
-                        : status.isActive
-                          ? "border-l-success shadow-md hover:shadow-lg bg-success/5"
-                          : "border-l-primary hover:shadow-md hover:border-l-primary"
-                  }`}
-                  onClick={() => setSelectedConferenceId(conference.id)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <CardTitle className={`text-base sm:text-lg ${status.isPast ? "text-muted-foreground" : ""}`}>
-                            {conference.name}
-                          </CardTitle>
-                          {conference.is_shared && conference.owner_name && (
-                            <Badge variant="outline" className="text-xs flex items-center gap-1">
-                              <Users className="w-3 h-3" />
-                              {conference.owner_name}
-                            </Badge>
-                          )}
-                          {conference.source_url && (
-                            <Badge variant="secondary" className="text-xs">
-                              Imported
-                            </Badge>
-                          )}
-                        </div>
-                        <CardDescription className={`mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm ${status.isPast ? "text-muted-foreground/70" : ""}`}>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {format(parseDateLocal(conference.start_date), "MMM d")} -{" "}
-                            {format(parseDateLocal(conference.end_date), "MMM d, yyyy")}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {conference.location}
-                          </span>
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Badge className={`text-xs ${status.className}`}>{status.label}</Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate('/calendar');
-                          }}
-                          title="View in Calendar"
-                        >
-                          <CalendarDays className="w-4 h-4" />
-                        </Button>
-                        {conference.source_url && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(conference.source_url, '_blank');
-                            }}
-                            title="Open conference website"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {/* Calendar invite-by-email removed in favor of in-app collaboration */}
-                        {!conference.is_shared && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setConferenceToEdit(conference.id);
-                              }}
-                              title="Edit conference"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                archiveConferenceMutation.mutate({
-                                  conferenceId: conference.id,
-                                  archived: !conference.archived,
-                                });
-                              }}
-                              title={conference.archived ? "Restore conference" : "Archive conference"}
-                            >
-                              {conference.archived ? (
-                                <ArchiveRestore className="w-4 h-4" />
-                              ) : (
-                                <Archive className="w-4 h-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setConferenceToDelete(conference.id);
-                              }}
-                              title="Delete conference"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="w-4 h-4" />
-                      <span>{leadsCount} {leadsCount === 1 ? "lead" : "leads"}</span>
-                    </div>
-                    {conference.tags && conference.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {conference.tags.map((tag, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="p-8 sm:p-12 text-center">
-              {showArchived ? (
-                <>
-                  <Archive className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">No archived conferences</p>
-                  <Button variant="outline" onClick={() => setShowArchived(false)}>
-                    <Calendar className="w-4 h-4 mr-2" />
-                    View Active Conferences
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">No conferences yet</p>
-                  <Button onClick={() => setShowAddDialog(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Your First Conference
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </div>
+
+      {isLoading ? (
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-muted-foreground">Loading conferences...</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {/* Active Conferences (In Progress + Upcoming) */}
+          {activeConferences.length > 0 ? (
+            <div className="space-y-3">
+              {activeConferences.map((conference) => renderConferenceCard(conference))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-8 sm:p-12 text-center">
+                <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground mb-4">No upcoming conferences</p>
+                <Button onClick={() => setShowAddDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Your First Conference
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Past Conferences - Collapsible */}
+          {pastConferences.length > 0 && (
+            <Collapsible open={showPast} onOpenChange={setShowPast}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between px-3 py-2 h-auto hover:bg-muted/50">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    {showPast ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    <span className="font-medium">Past Conferences</span>
+                    <Badge variant="secondary" className="text-xs">{pastConferences.length}</Badge>
+                  </span>
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 mt-2">
+                {pastConferences.map((conference) => renderConferenceCard(conference))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Archived Conferences - Collapsible */}
+          {archivedCount > 0 && (
+            <Collapsible open={showArchived} onOpenChange={setShowArchived}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between px-3 py-2 h-auto hover:bg-muted/50">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    {showArchived ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    <Archive className="w-4 h-4" />
+                    <span className="font-medium">Archived</span>
+                    <Badge variant="secondary" className="text-xs">{archivedCount}</Badge>
+                  </span>
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 mt-2">
+                {archivedConferences.map((conference) => renderConferenceCard(conference))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+        </div>
+      )}
 
       {/* Leads Panel - Full width on mobile, stacked below conferences */}
       {selectedConference && (

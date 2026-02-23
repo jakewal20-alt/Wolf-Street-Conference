@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Session } from "@supabase/supabase-js";
+import PendingApproval from "@/pages/PendingApproval";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,24 +12,51 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isApproved, setIsApproved] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
-        setLoading(false);
+        if (!session) {
+          setLoading(false);
+          setIsApproved(null);
+        }
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
+      if (!session) setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Check approval status when session changes
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const checkApproval = async () => {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("is_approved")
+        .eq("id", session.user.id)
+        .single();
+
+      if (error) {
+        console.error("Error checking approval:", error);
+        // If profile doesn't exist yet (race condition with trigger), wait and retry
+        setTimeout(checkApproval, 1000);
+        return;
+      }
+
+      setIsApproved(profile?.is_approved ?? false);
+      setLoading(false);
+    };
+
+    checkApproval();
+  }, [session?.user?.id]);
 
   if (loading) {
     return (
@@ -44,6 +72,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!session) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (!isApproved) {
+    return <PendingApproval email={session.user.email || ""} />;
   }
 
   return <>{children}</>;

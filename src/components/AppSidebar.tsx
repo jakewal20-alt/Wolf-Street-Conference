@@ -1,4 +1,5 @@
-import { Users, Calendar, UserRound, Settings, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Users, Calendar, UserRound, Settings, LogOut, Shield } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,10 +22,34 @@ const navigationItems = [
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
+const adminItems = [
+  { title: "Users", url: "/admin/users", icon: Shield },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const isCollapsed = state === "collapsed";
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single();
+
+      setIsAdmin(profile?.is_admin ?? false);
+    };
+
+    checkAdmin();
+  }, []);
+
+  const allItems = isAdmin ? [...navigationItems, ...adminItems] : navigationItems;
 
   return (
     <Sidebar className={isCollapsed ? "w-14" : "w-60"} collapsible="icon">
@@ -51,14 +76,16 @@ export function AppSidebar() {
           {!isCollapsed && <SidebarGroupLabel>Navigation</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => {
-                const isActive = location.pathname === item.url;
+              {allItems.map((item) => {
+                const isActive = item.url === "/"
+                  ? location.pathname === "/"
+                  : location.pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>
                       <NavLink
                         to={item.url}
-                        end
+                        end={item.url === "/"}
                         className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-sidebar-accent"
                         activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                       >
