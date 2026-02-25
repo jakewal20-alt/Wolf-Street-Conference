@@ -16,11 +16,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        if (!session) {
+      (event, session) => {
+        // Only clear session on explicit sign-out, not on token refresh failures
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
           setLoading(false);
           setIsApproved(null);
+        } else if (session) {
+          setSession(session);
         }
       }
     );
