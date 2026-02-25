@@ -72,57 +72,33 @@ const Calendar = () => {
   const calendarEnd = addDays(calendarStart, 41); // 6 weeks
   const monthDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  // Fetch users who have shared conferences/calendar with current user
-  const { data: sharedCalendarUsers } = useQuery({
-    queryKey: ["calendar-shared-users"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data: shares } = await supabase
-        .from('user_data_shares')
-        .select('owner_user_id')
-        .eq('shared_with_user_id', user.id)
-        .eq('share_type', 'conferences');
-
-      return shares?.map(s => s.owner_user_id) || [];
-    },
-  });
-
   // Fetch conference-linked calendar event IDs (used to hide orphan duplicates)
   const { data: conferenceLinkedEventIds = [] } = useQuery({
-    queryKey: ["conference-linked-event-ids", sharedCalendarUsers],
+    queryKey: ["conference-linked-event-ids"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-
-      const userIds = [user.id, ...(sharedCalendarUsers || [])];
 
       const { data, error } = await supabase
         .from("conferences")
         .select("calendar_event_id")
-        .in("created_by", userIds)
         .not("calendar_event_id", "is", null);
 
       if (error) throw error;
       return (data || []).map(c => c.calendar_event_id).filter(Boolean) as string[];
     },
-    enabled: sharedCalendarUsers !== undefined,
   });
 
   const { data: calendarEvents = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ["calendar-events", sharedCalendarUsers, conferenceLinkedEventIds],
+    queryKey: ["calendar-events", conferenceLinkedEventIds],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // Fetch own events + shared users' events
-      const userIds = [user.id, ...(sharedCalendarUsers || [])];
-
+      // Fetch ALL calendar events (shared across all users)
       const { data, error } = await supabase
         .from("calendar_events")
         .select("*")
-        .in("user_id", userIds)
         .order("start_date", { ascending: true });
 
       if (error) throw error;
@@ -136,7 +112,6 @@ const Calendar = () => {
         return true;
       })) as CalendarEvent[];
     },
-    enabled: sharedCalendarUsers !== undefined,
   });
 
   const createCalendarEventMutation = useMutation({

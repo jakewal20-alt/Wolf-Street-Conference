@@ -38,7 +38,6 @@ export function ImportCalendarEventsDialog({ open, onOpenChange }: ImportCalenda
       const { data, error } = await supabase
         .from("calendar_events")
         .select("*")
-        .eq("user_id", user.id)
         .gte("start_date", thirtyDaysAgo.toISOString().split('T')[0])
         .order("start_date", { ascending: true });
 
@@ -72,7 +71,6 @@ export function ImportCalendarEventsDialog({ open, onOpenChange }: ImportCalenda
       const { data, error } = await supabase
         .from("conferences")
         .select("calendar_event_id")
-        .eq("created_by", user.id)
         .not("calendar_event_id", "is", null);
 
       if (error) throw error;

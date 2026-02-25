@@ -118,7 +118,6 @@ export default function LogOutreachDialog({
       const { data, error } = await supabase
         .from('contacts')
         .select('id, name, org_name')
-        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;

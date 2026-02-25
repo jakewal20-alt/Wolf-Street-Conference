@@ -110,58 +110,34 @@ export default function Conferences() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Conferences you own
-      const { data: owned, error: ownedError } = await supabase
+      // Fetch ALL conferences (shared across all users)
+      const { data, error } = await supabase
         .from("conferences")
         .select(`*, conference_leads(count)`)
-        .eq("created_by", user.id)
         .order("start_date", { ascending: true });
-      if (ownedError) throw ownedError;
+      if (error) throw error;
 
-      // Conferences where you are a collaborator
-      const { data: collabs, error: collabError } = await supabase
-        .from("conference_collaborators")
-        .select("conference_id")
-        .eq("user_id", user.id);
-      if (collabError) throw collabError;
-
-      const collaboratedIds = (collabs || []).map((c) => c.conference_id).filter(Boolean);
-      const { data: collaborated, error: collaboratedError } = collaboratedIds.length
-        ? await supabase
-            .from("conferences")
-            .select(`*, conference_leads(count)`)
-            .in("id", collaboratedIds)
-            .order("start_date", { ascending: true })
-        : { data: [], error: null };
-      if (collaboratedError) throw collaboratedError;
-
-      // Merge + de-dupe
-      const merged = [...(owned || []), ...(collaborated || [])];
-      const byId = new Map<string, any>();
-      for (const conf of merged) byId.set(conf.id, conf);
-      const data = Array.from(byId.values());
-
-      // Enrich with owner info for shared conferences
-      const ownerIds = Array.from(new Set(data.map((c) => c.created_by).filter((id) => id && id !== user.id)));
+      // Enrich with owner info
+      const ownerIds = Array.from(new Set((data || []).map((c) => c.created_by).filter((id) => id && id !== user.id)));
       const { data: profiles, error: profilesError } = ownerIds.length
         ? await supabase.from("profiles").select("id, full_name, email").in("id", ownerIds)
         : { data: [], error: null };
       if (profilesError) throw profilesError;
       const ownerNameById = new Map<string, string>();
       (profiles || []).forEach((p: any) => ownerNameById.set(p.id, p.full_name || p.email || "Unknown"));
-      
+
       // Add owner info and sort: upcoming first (by date asc), then past
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
-      const enriched = data?.map(conf => ({
+
+      const enriched = (data || []).map(conf => ({
         ...conf,
         is_shared: conf.created_by !== user.id,
-        owner_name: conf.created_by !== user.id 
+        owner_name: conf.created_by !== user.id
           ? ownerNameById.get(conf.created_by) || null
           : null
-      })) || [];
-      
+      }));
+
       // Sort: upcoming/in-progress first (by start_date asc), then past (by start_date desc)
       return enriched.sort((a, b) => {
         const aStart = parseDateLocal(a.start_date);

@@ -91,11 +91,10 @@ export default function Contacts() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Fetch contacts with touchpoint counts
+      // Fetch ALL contacts (shared across all users)
       const { data: contactsData, error: contactsError } = await supabase
         .from('contacts')
         .select('*')
-        .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
       if (contactsError) throw contactsError;

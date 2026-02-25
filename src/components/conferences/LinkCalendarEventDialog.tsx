@@ -46,7 +46,6 @@ export function LinkCalendarEventDialog({
       const { data, error } = await supabase
         .from("calendar_events")
         .select("*")
-        .eq("user_id", user.id)
         .gte("start_date", sixtyDaysAgo.toISOString().split('T')[0])
         .order("start_date", { ascending: false });
 

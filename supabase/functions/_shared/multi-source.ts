@@ -360,7 +360,7 @@ export async function scrapeWithFirecrawl(
  */
 export async function scrapeAndExtractSamGov(
   noticeIdOrUrl: string,
-  lovableApiKey: string,
+  openaiApiKey: string,
   firecrawlApiKey?: string
 ): Promise<{ success: boolean; item: NormalizedOpportunity | null; error?: string }> {
   // Build and normalize the SAM.gov URL
@@ -413,7 +413,7 @@ export async function scrapeAndExtractSamGov(
   }
   
   // Use AI to extract opportunity data
-  const extractResult = await extractFromHtml(htmlContent, url, lovableApiKey);
+  const extractResult = await extractFromHtml(htmlContent, url, openaiApiKey);
   
   if (extractResult.success && extractResult.item) {
     extractResult.item.external_metadata = {
@@ -428,12 +428,12 @@ export async function scrapeAndExtractSamGov(
 }
 
 /**
- * Extract opportunity data from HTML using AI (Lovable AI)
+ * Extract opportunity data from HTML using AI (OpenAI)
  */
 export async function extractFromHtml(
   html: string,
   sourceUrl: string,
-  lovableApiKey: string
+  openaiApiKey: string
 ): Promise<{ success: boolean; item: NormalizedOpportunity | null; error?: string }> {
   console.log(`[multi-source] Extracting opportunity data from HTML (${html.length} chars)`);
 
@@ -458,14 +458,15 @@ Return ONLY valid JSON with these fields. Use null for fields you cannot find.`;
   const userPrompt = `Extract opportunity information from this page (${sourceUrl}):\n\n${truncatedHtml}`;
 
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-4o-mini',
+        max_tokens: 2000,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },

@@ -69,8 +69,8 @@ serve(async (req) => {
     const unscoredLeads = (leads || []).filter(l => l.ai_fit_score == null);
     if (unscoredLeads.length > 0) {
       console.log(`Auto-scoring ${unscoredLeads.length} unscored leads...`);
-      const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-      if (lovableApiKey) {
+      const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+      if (openaiApiKey) {
         const personaContext = getPersonaPromptPrefix();
         const scoringPrompt = `${personaContext}
 
@@ -99,14 +99,15 @@ Return a JSON array where each element has:
 - "ai_reason": 1-2 sentence explanation of score`;
 
         try {
-          const scoreResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const scoreResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${lovableApiKey}`,
+              'Authorization': `Bearer ${openaiApiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
+              model: 'gpt-4o-mini',
+              max_tokens: 2000,
               messages: [
                 { role: 'system', content: 'You are a BD scoring assistant. Return valid JSON only.' },
                 { role: 'user', content: scoringPrompt }
@@ -266,23 +267,24 @@ CRITICAL RULES:
 5. Clear prioritization guidance
 6. Strategic themes that align with company capabilities${partnerInsights ? '\n7. Incorporate partner insights and competitive intelligence' : ''}`;
 
-    // Call Lovable AI
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
+    // Call OpenAI
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
       return new Response(
         JSON.stringify({ success: false, error: "AI service not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-4o-mini',
+        max_tokens: 2000,
         messages: [
           {
             role: 'system',
