@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, UserCheck, UserX, Users, Loader2 } from "lucide-react";
+import { Shield, UserCheck, UserX, Users, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { PageLayout, PageHeader } from "@/components/PageLayout";
@@ -38,6 +38,24 @@ export default function AdminUsers() {
     onError: (error) => {
       console.error("Update error:", error);
       toast.error("Failed to update user");
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("User deleted");
+    },
+    onError: (error) => {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete user: " + error.message);
     },
   });
 
@@ -141,6 +159,21 @@ export default function AdminUsers() {
                         Revoke
                       </Button>
                     ) : null}
+                    {!user.is_admin && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`Delete ${user.email}? This cannot be undone.`)) {
+                            deleteUserMutation.mutate(user.id);
+                          }
+                        }}
+                        disabled={deleteUserMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
