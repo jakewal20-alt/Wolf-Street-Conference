@@ -164,8 +164,8 @@ export default function Conferences() {
   });
 
   const getConferenceStatus = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = parseDateLocal(startDate);
+    const end = parseDateLocal(endDate);
     const now = new Date();
 
     if (isWithinInterval(now, { start, end })) {
