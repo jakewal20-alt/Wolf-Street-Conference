@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, Building2, User, Calendar, ImageIcon } from "lucide-react";
-import { format } from "date-fns";
+import { safeFormat } from "@/utils/dateHelpers";
 
 interface LeadDetailDialogProps {
   open: boolean;
@@ -58,7 +58,7 @@ export function LeadDetailDialog({ open, onOpenChange, lead }: LeadDetailDialogP
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="w-4 h-4" />
-            <span>Added {format(new Date(lead.created_at), "MMM d, yyyy")}</span>
+            <span>Added {safeFormat(lead.created_at, "MMM d, yyyy")}</span>
           </div>
 
           {lead.ai_fit_score && (

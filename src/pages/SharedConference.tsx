@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MapPin, Calendar, Users, Mic, FileText } from "lucide-react";
+import { safeDate } from "@/utils/dateHelpers";
 import { VoiceRecapsList } from "@/components/conferences/VoiceRecapsList";
 
 export default function SharedConference() {
@@ -26,7 +27,7 @@ export default function SharedConference() {
       if (!shareLink) throw new Error("Invalid or expired share link");
 
       // Check expiry
-      if (shareLink.expires_at && new Date(shareLink.expires_at) < new Date()) {
+      if (shareLink.expires_at && safeDate(shareLink.expires_at) < new Date()) {
         throw new Error("This share link has expired");
       }
 
@@ -106,8 +107,8 @@ export default function SharedConference() {
             {conference.start_date && (
               <span className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                {new Date(conference.start_date).toLocaleDateString()}
-                {conference.end_date && ` — ${new Date(conference.end_date).toLocaleDateString()}`}
+                {safeDate(conference.start_date).toLocaleDateString()}
+                {conference.end_date && ` — ${safeDate(conference.end_date).toLocaleDateString()}`}
               </span>
             )}
           </div>
@@ -178,7 +179,7 @@ export default function SharedConference() {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                     <span>{recap.profiles?.full_name || "Unknown"}</span>
                     <span>·</span>
-                    <span>{new Date(recap.created_at).toLocaleDateString()}</span>
+                    <span>{safeDate(recap.created_at).toLocaleDateString()}</span>
                     {recap.conference_leads && (
                       <>
                         <span>·</span>

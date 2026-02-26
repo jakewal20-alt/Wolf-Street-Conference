@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, startOfMonth, endOfMonth, addDays, addMonths, isToday, isPast, eachDayOfInterval } from "date-fns";
-import { parseDateLocal } from "@/utils/dateHelpers";
+import { parseDateLocal, safeFormat } from "@/utils/dateHelpers";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3, Rows3, List, Download, Plus, Loader2, Sparkles, Mail } from "lucide-react";
@@ -340,9 +340,9 @@ const Calendar = () => {
     const icsEvents = calendarEvents
       .map(event => {
         const startDate = parseDateLocal(event.start_date);
-        const formattedStart = format(startDate, "yyyyMMdd'T'HHmmss'Z'");
+        const formattedStart = safeFormat(startDate, "yyyyMMdd'T'HHmmss'Z'", "");
         const endDate = event.end_date ? parseDateLocal(event.end_date) : startDate;
-        const formattedEnd = format(endDate, "yyyyMMdd'T'HHmmss'Z'");
+        const formattedEnd = safeFormat(endDate, "yyyyMMdd'T'HHmmss'Z'", "");
         return [
           'BEGIN:VEVENT',
           `UID:${event.id}@calendar.app`,
@@ -477,7 +477,7 @@ const Calendar = () => {
                         </div>
                         <div className="text-muted-foreground flex items-center gap-1">
                           <CalendarIcon className="h-3 w-3" />
-                          {format(parseDateLocal(event.start_date), "MMM d, yyyy")}
+                          {safeFormat(event.start_date, "MMM d, yyyy")}
                         </div>
                         {event.registration_url && (
                           <a
@@ -1229,7 +1229,7 @@ const Calendar = () => {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {selectedEvent.start_date ? format(parseDateLocal(selectedEvent.start_date), "PPP") : "Pick a date"}
+                          {selectedEvent.start_date ? safeFormat(selectedEvent.start_date, "PPP", "Pick a date") : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -1258,7 +1258,7 @@ const Calendar = () => {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {selectedEvent.end_date ? format(parseDateLocal(selectedEvent.end_date), "PPP") : "Pick a date"}
+                          {selectedEvent.end_date ? safeFormat(selectedEvent.end_date, "PPP", "Pick a date") : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">

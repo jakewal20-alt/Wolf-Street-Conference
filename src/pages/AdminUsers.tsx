@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Shield, UserCheck, UserX, Users, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { safeFormat } from "@/utils/dateHelpers";
 import { PageLayout, PageHeader } from "@/components/PageLayout";
 
 export default function AdminUsers() {
@@ -128,7 +128,7 @@ export default function AdminUsers() {
                     <p className="text-sm text-muted-foreground">{user.email}</p>
                     {user.created_at && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        Joined {format(new Date(user.created_at), "MMM d, yyyy 'at' h:mm a")}
+                        Joined {safeFormat(user.created_at, "MMM d, yyyy 'at' h:mm a")}
                       </p>
                     )}
                   </div>

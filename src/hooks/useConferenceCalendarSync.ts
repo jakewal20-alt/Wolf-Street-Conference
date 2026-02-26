@@ -1,8 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { subDays, addDays, format } from "date-fns";
-import { parseDateLocal } from "@/utils/dateHelpers";
+import { subDays, addDays } from "date-fns";
+import { parseDateLocal, safeFormat } from "@/utils/dateHelpers";
 
 export function useConferenceCalendarSync() {
   const queryClient = useQueryClient();
@@ -48,20 +48,20 @@ export function useConferenceCalendarSync() {
         const confEnd = parseDateLocal(conference.end_date);
 
         if (travelDays.before > 0) {
-          calendarStartDate = format(subDays(confStart, travelDays.before), 'yyyy-MM-dd');
+          calendarStartDate = safeFormat(subDays(confStart, travelDays.before), 'yyyy-MM-dd', conference.start_date);
         }
         if (travelDays.after > 0) {
-          calendarEndDate = format(addDays(confEnd, travelDays.after), 'yyyy-MM-dd');
+          calendarEndDate = safeFormat(addDays(confEnd, travelDays.after), 'yyyy-MM-dd', conference.end_date);
         }
 
         // Build description with travel info
         const travelInfo = [];
         if (travelDays.before > 0) {
-          travelInfo.push(`✈️ Travel: ${format(subDays(confStart, travelDays.before), 'MMM d')}`);
+          travelInfo.push(`✈️ Travel: ${safeFormat(subDays(confStart, travelDays.before), 'MMM d')}`);
         }
-        travelInfo.push(`📍 Conference: ${format(confStart, 'MMM d')} - ${format(confEnd, 'MMM d')}`);
+        travelInfo.push(`📍 Conference: ${safeFormat(confStart, 'MMM d')} - ${safeFormat(confEnd, 'MMM d')}`);
         if (travelDays.after > 0) {
-          travelInfo.push(`✈️ Return: ${format(addDays(confEnd, 1), 'MMM d')} - ${format(addDays(confEnd, travelDays.after), 'MMM d')}`);
+          travelInfo.push(`✈️ Return: ${safeFormat(addDays(confEnd, 1), 'MMM d')} - ${safeFormat(addDays(confEnd, travelDays.after), 'MMM d')}`);
         }
 
         description = travelInfo.join('\n') + (description ? '\n\n' + description : '');
@@ -167,22 +167,22 @@ export function useConferenceCalendarSync() {
         const confEnd = parseDateLocal(conference.end_date);
         
         if (travelDays.before > 0) {
-          calendarStartDate = format(subDays(confStart, travelDays.before), 'yyyy-MM-dd');
+          calendarStartDate = safeFormat(subDays(confStart, travelDays.before), 'yyyy-MM-dd', conference.start_date);
         }
         if (travelDays.after > 0) {
-          calendarEndDate = format(addDays(confEnd, travelDays.after), 'yyyy-MM-dd');
+          calendarEndDate = safeFormat(addDays(confEnd, travelDays.after), 'yyyy-MM-dd', conference.end_date);
         }
-        
+
         // Build description with travel info
         const travelInfo = [];
         if (travelDays.before > 0) {
-          travelInfo.push(`✈️ Travel: ${format(subDays(confStart, travelDays.before), 'MMM d')}`);
+          travelInfo.push(`✈️ Travel: ${safeFormat(subDays(confStart, travelDays.before), 'MMM d')}`);
         }
-        travelInfo.push(`📍 Conference: ${format(confStart, 'MMM d')} - ${format(confEnd, 'MMM d')}`);
+        travelInfo.push(`📍 Conference: ${safeFormat(confStart, 'MMM d')} - ${safeFormat(confEnd, 'MMM d')}`);
         if (travelDays.after > 0) {
-          travelInfo.push(`✈️ Return: ${format(addDays(confEnd, 1), 'MMM d')} - ${format(addDays(confEnd, travelDays.after), 'MMM d')}`);
+          travelInfo.push(`✈️ Return: ${safeFormat(addDays(confEnd, 1), 'MMM d')} - ${safeFormat(addDays(confEnd, travelDays.after), 'MMM d')}`);
         }
-        
+
         // Preserve existing description but prepend travel info
         const originalDesc = conference.description || "";
         // Remove any old travel info if it exists

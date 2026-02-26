@@ -21,7 +21,8 @@ import {
   Award,
   ExternalLink
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
+import { safeFormat } from '@/utils/dateHelpers';
 import LogOutreachDialog from './LogOutreachDialog';
 import { useNavigate } from 'react-router-dom';
 
@@ -213,7 +214,7 @@ export default function ContactDetailDialog({ contact, open, onOpenChange }: Con
                       </div>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        {format(new Date(touchpoint.date), 'MMM d, yyyy')}
+                        {safeFormat(touchpoint.date, 'MMM d, yyyy')}
                       </div>
                     </div>
 

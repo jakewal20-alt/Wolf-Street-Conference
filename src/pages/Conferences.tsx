@@ -22,8 +22,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { format, isToday, isFuture, isWithinInterval } from "date-fns";
-import { parseDateLocal } from "@/utils/dateHelpers";
+import { isToday, isFuture, isWithinInterval } from "date-fns";
+import { parseDateLocal, safeFormat } from "@/utils/dateHelpers";
 import { AddConferenceDialog } from "@/components/conferences/AddConferenceDialog";
 import { ConferenceLeadsPanel } from "@/components/conferences/ConferenceLeadsPanel";
 import { ImportCalendarEventsDialog } from "@/components/conferences/ImportCalendarEventsDialog";
@@ -257,8 +257,8 @@ export default function Conferences() {
               <CardDescription className={`mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm ${status.isPast ? "text-muted-foreground/70" : ""}`}>
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {format(parseDateLocal(conference.start_date), "MMM d")} -{" "}
-                  {format(parseDateLocal(conference.end_date), "MMM d, yyyy")}
+                  {safeFormat(conference.start_date, "MMM d")} -{" "}
+                  {safeFormat(conference.end_date, "MMM d, yyyy")}
                 </span>
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3 h-3" />

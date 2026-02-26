@@ -39,6 +39,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { safeDate } from '@/utils/dateHelpers';
 import ContactDetailDialog from '@/components/contacts/ContactDetailDialog';
 import UploadBusinessCardDialog from '@/components/contacts/UploadBusinessCardDialog';
 
@@ -450,7 +451,7 @@ export default function Contacts() {
                       {contact.last_touchpoint ? (
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Calendar className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(contact.last_touchpoint), { addSuffix: true })}
+                          {formatDistanceToNow(safeDate(contact.last_touchpoint), { addSuffix: true })}
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm">Never</span>

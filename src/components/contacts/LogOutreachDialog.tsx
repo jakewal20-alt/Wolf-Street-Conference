@@ -35,6 +35,7 @@ import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { safeDate } from '@/utils/dateHelpers';
 
 interface Contact {
   id: string;
@@ -175,7 +176,7 @@ export default function LogOutreachDialog({
           contact_id: selectedContactId,
           related_type: relatedType || null,
           related_id: relatedId || null,
-          date: new Date(formData.date).toISOString(),
+          date: safeDate(formData.date).toISOString(),
           type: formData.type,
           outcome: formData.outcome || null,
           notes: formData.notes || null,

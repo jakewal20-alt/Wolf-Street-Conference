@@ -1,4 +1,4 @@
-import { startOfWeek as dateStartOfWeek, endOfWeek as dateEndOfWeek, addWeeks, subWeeks, format, parseISO } from "date-fns";
+import { startOfWeek as dateStartOfWeek, endOfWeek as dateEndOfWeek, addWeeks, subWeeks, format as dateFnsFormat, parseISO } from "date-fns";
 
 /**
  * Get the start of the week (Sunday at 00:00 UTC-8)
@@ -27,7 +27,7 @@ export function getWeekEnd(date: Date = new Date()): Date {
  */
 export function getWeekIdentifier(date: Date = new Date()): string {
   const weekStart = getWeekStart(date);
-  return format(weekStart, "yyyy-MM-dd");
+  return dateFnsFormat(weekStart, "yyyy-MM-dd");
 }
 
 /**
@@ -74,7 +74,7 @@ export function isDateInWeek(date: Date | string, weekStart: Date): boolean {
  * @returns Formatted string
  */
 export function getWeekLabel(weekStart: Date): string {
-  return `Week of ${format(weekStart, "MMM d, yyyy")}`;
+  return `Week of ${dateFnsFormat(weekStart, "MMM d, yyyy")}`;
 }
 
 /**
@@ -89,8 +89,16 @@ export function getWeekStartForMeeting(meetingDate: Date | string): Date {
 }
 
 /**
+ * Check if a Date object is valid (not Invalid Date)
+ */
+function isValidDate(d: Date): boolean {
+  return d instanceof Date && !isNaN(d.getTime());
+}
+
+/**
  * Parse a date-only string (YYYY-MM-DD) as a local date, not UTC.
  * This prevents the timezone offset issue where "2025-02-01" becomes Jan 31 in local time.
+ * Always returns a valid Date (falls back to current date on any error).
  * @param dateString - Date string in YYYY-MM-DD format
  * @returns Date object in local timezone
  */
@@ -101,7 +109,8 @@ export function parseDateLocal(dateString: string | null | undefined): Date {
   }
   // If it's already a full ISO string with time, use parseISO
   if (dateString.includes('T')) {
-    return parseISO(dateString);
+    const parsed = parseISO(dateString);
+    return isValidDate(parsed) ? parsed : new Date();
   }
   // For date-only strings, parse as local date by adding T00:00:00
   // This ensures the date is interpreted in local timezone
@@ -109,5 +118,35 @@ export function parseDateLocal(dateString: string | null | undefined): Date {
   if (isNaN(year) || isNaN(month) || isNaN(day)) {
     return new Date();
   }
-  return new Date(year, month - 1, day);
+  const result = new Date(year, month - 1, day);
+  return isValidDate(result) ? result : new Date();
+}
+
+/**
+ * Safe wrapper around date-fns format() that never throws.
+ * Returns fallback string if the date is invalid.
+ */
+export function safeFormat(date: Date | string | null | undefined, formatStr: string, fallback = "—"): string {
+  try {
+    if (!date) return fallback;
+    const d = typeof date === "string" ? parseDateLocal(date) : date;
+    if (!isValidDate(d)) return fallback;
+    return dateFnsFormat(d, formatStr);
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Safe wrapper around new Date(value) that never returns Invalid Date.
+ * Returns current date as fallback.
+ */
+export function safeDate(value: string | number | Date | null | undefined): Date {
+  if (!value) return new Date();
+  try {
+    const d = value instanceof Date ? value : new Date(value);
+    return isValidDate(d) ? d : new Date();
+  } catch {
+    return new Date();
+  }
 }

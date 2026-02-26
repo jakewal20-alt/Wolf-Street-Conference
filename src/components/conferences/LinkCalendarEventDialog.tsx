@@ -11,11 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { safeFormat } from "@/utils/dateHelpers";
 import { Calendar, MapPin } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { parseDateLocal } from "@/utils/dateHelpers";
 
 interface LinkCalendarEventDialogProps {
   open: boolean;
@@ -124,9 +123,9 @@ export function LinkCalendarEventDialog({
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {format(parseDateLocal(event.start_date), "MMM d")}
+                          {safeFormat(event.start_date, "MMM d")}
                           {event.end_date && event.end_date !== event.start_date && (
-                            <> - {format(parseDateLocal(event.end_date), "MMM d, yyyy")}</>
+                            <> - {safeFormat(event.end_date, "MMM d, yyyy")}</>
                           )}
                         </span>
                         {event.location && (

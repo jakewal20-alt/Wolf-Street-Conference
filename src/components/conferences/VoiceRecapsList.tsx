@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Mic, Clock, User, ChevronDown, ChevronUp, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef } from "react";
+import { safeDate } from "@/utils/dateHelpers";
 
 interface VoiceRecapsListProps {
   conferenceId: string;
@@ -113,8 +114,8 @@ export function VoiceRecapsList({ conferenceId, readOnly = false }: VoiceRecapsL
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(recap.created_at).toLocaleDateString()} at{" "}
-                      {new Date(recap.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {safeDate(recap.created_at).toLocaleDateString()} at{" "}
+                      {safeDate(recap.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </p>
 
                     {/* Preview */}

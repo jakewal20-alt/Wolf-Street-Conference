@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Loader2, FileText, TrendingUp, Users, Target, Briefcase, CheckCircle2, Download, Pencil, Save, X, MessageSquare, ClipboardList } from "lucide-react";
 import { useState } from "react";
+import { safeDate } from "@/utils/dateHelpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toastError, toastSuccess } from "@/utils/toastHelpers";
@@ -204,7 +205,7 @@ export function ExecutiveSummary({ conference }: ExecutiveSummaryProps) {
               </CardTitle>
               {conference.exec_summary_generated_at && (
                 <CardDescription>
-                  Generated {new Date(conference.exec_summary_generated_at).toLocaleDateString()}
+                  Generated {safeDate(conference.exec_summary_generated_at).toLocaleDateString()}
                 </CardDescription>
               )}
             </div>
