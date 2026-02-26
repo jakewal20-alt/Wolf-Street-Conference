@@ -164,30 +164,38 @@ export default function Conferences() {
   });
 
   const getConferenceStatus = (startDate: string, endDate: string) => {
-    const start = parseDateLocal(startDate);
-    const end = parseDateLocal(endDate);
-    const now = new Date();
+    try {
+      const start = parseDateLocal(startDate);
+      const end = parseDateLocal(endDate || startDate); // fallback end to start if missing
+      const now = new Date();
 
-    if (isWithinInterval(now, { start, end })) {
-      return { 
-        label: "In Progress", 
-        variant: "default" as const,
-        isPast: false,
-        isActive: true,
-        className: "bg-success text-success-foreground border-success"
-      };
+      // Ensure start <= end for isWithinInterval
+      const safeStart = start <= end ? start : end;
+      const safeEnd = start <= end ? end : start;
+
+      if (isWithinInterval(now, { start: safeStart, end: safeEnd })) {
+        return {
+          label: "In Progress",
+          variant: "default" as const,
+          isPast: false,
+          isActive: true,
+          className: "bg-success text-success-foreground border-success"
+        };
+      }
+      if (isFuture(safeStart)) {
+        return {
+          label: "Upcoming",
+          variant: "secondary" as const,
+          isPast: false,
+          isActive: false,
+          className: "bg-primary text-primary-foreground"
+        };
+      }
+    } catch {
+      // If any date parsing fails, treat as upcoming
     }
-    if (isFuture(start)) {
-      return { 
-        label: "Upcoming", 
-        variant: "secondary" as const,
-        isPast: false,
-        isActive: false,
-        className: "bg-primary text-primary-foreground"
-      };
-    }
-    return { 
-      label: "Past", 
+    return {
+      label: "Past",
       variant: "outline" as const,
       isPast: true,
       isActive: false,
