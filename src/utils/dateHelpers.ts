@@ -94,7 +94,11 @@ export function getWeekStartForMeeting(meetingDate: Date | string): Date {
  * @param dateString - Date string in YYYY-MM-DD format
  * @returns Date object in local timezone
  */
-export function parseDateLocal(dateString: string): Date {
+export function parseDateLocal(dateString: string | null | undefined): Date {
+  // Handle null/undefined/empty strings
+  if (!dateString) {
+    return new Date();
+  }
   // If it's already a full ISO string with time, use parseISO
   if (dateString.includes('T')) {
     return parseISO(dateString);
@@ -102,5 +106,8 @@ export function parseDateLocal(dateString: string): Date {
   // For date-only strings, parse as local date by adding T00:00:00
   // This ensures the date is interpreted in local timezone
   const [year, month, day] = dateString.split('-').map(Number);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) {
+    return new Date();
+  }
   return new Date(year, month - 1, day);
 }
