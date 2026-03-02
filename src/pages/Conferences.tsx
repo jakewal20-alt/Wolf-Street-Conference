@@ -32,6 +32,7 @@ import { EditConferenceDialog } from "@/components/conferences/EditConferenceDia
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageLayout, PageHeader } from "@/components/PageLayout";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ConferenceAttendeeBadges } from "@/components/conferences/ConferenceAttendees";
 
 export default function Conferences() {
   const navigate = useNavigate();
@@ -311,9 +312,12 @@ export default function Conferences() {
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Users className="w-4 h-4" />
-            <span>{leadsCount} {leadsCount === 1 ? "lead" : "leads"}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Users className="w-4 h-4" />
+              <span>{leadsCount} {leadsCount === 1 ? "lead" : "leads"}</span>
+            </div>
+            <ConferenceAttendeeBadges conferenceId={conference.id} />
           </div>
           {conference.tags && conference.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">

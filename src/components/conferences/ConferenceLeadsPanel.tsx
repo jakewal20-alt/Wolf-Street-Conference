@@ -16,6 +16,7 @@ import { ExecutiveSummary } from "./ExecutiveSummary";
 import { VoiceRecapDialog } from "./VoiceRecapDialog";
 import { VoiceRecapsList } from "./VoiceRecapsList";
 import { useNavigate } from "react-router-dom";
+import { ConferenceAttendeeManager } from "./ConferenceAttendeeManager";
 
 interface ConferenceLeadsPanelProps {
   conference: any;
@@ -187,6 +188,8 @@ export function ConferenceLeadsPanel({ conference }: ConferenceLeadsPanelProps) 
           </div>
         </CardHeader>
       </Card>
+
+      <ConferenceAttendeeManager conferenceId={conference.id} />
 
       {isLoading ? (
         <Card>

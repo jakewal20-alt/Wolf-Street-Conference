@@ -963,6 +963,55 @@ export type Database = {
           },
         ]
       }
+      conference_attendees: {
+        Row: {
+          id: string
+          conference_id: string
+          user_id: string
+          added_by: string
+          notified_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conference_id: string
+          user_id: string
+          added_by: string
+          notified_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conference_id?: string
+          user_id?: string
+          added_by?: string
+          notified_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conference_attendees_conference_id_fkey"
+            columns: ["conference_id"]
+            isOneToOne: false
+            referencedRelation: "conferences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conference_attendees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conference_attendees_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conference_leads: {
         Row: {
           ai_fit_score: number | null
