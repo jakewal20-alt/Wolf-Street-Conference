@@ -3,16 +3,10 @@ import { useConferenceAttendees } from "@/hooks/useConferenceAttendees";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, X, Loader2, Mail, Check, Users } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, X, Loader2, Mail, Check, Users, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { safeFormat } from "@/utils/dateHelpers";
 
 interface ConferenceAttendeeManagerProps {
   conferenceId: string;
@@ -26,7 +20,8 @@ function getInitials(name?: string | null, email?: string): string {
 }
 
 export function ConferenceAttendeeManager({ conferenceId }: ConferenceAttendeeManagerProps) {
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const {
     attendees,
     attendeesLoading,
@@ -40,10 +35,16 @@ export function ConferenceAttendeeManager({ conferenceId }: ConferenceAttendeeMa
     isRemoving,
   } = useConferenceAttendees(conferenceId);
 
-  const handleAddAttendee = () => {
-    if (!selectedUserId) return;
-    addAttendee(selectedUserId);
-    setSelectedUserId("");
+  const toggleUser = (userId: string) => {
+    setSelectedUserIds(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleAddSelected = () => {
+    selectedUserIds.forEach(userId => addAttendee(userId));
+    setSelectedUserIds([]);
+    setPopoverOpen(false);
   };
 
   return (
@@ -76,38 +77,69 @@ export function ConferenceAttendeeManager({ conferenceId }: ConferenceAttendeeMa
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Add attendee dropdown */}
-        <div className="flex gap-2">
-          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Add a team member..." />
-            </SelectTrigger>
-            <SelectContent>
+        {/* Multi-select add attendees */}
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-start text-muted-foreground">
+              <UserPlus className="w-4 h-4 mr-2" />
+              {selectedUserIds.length > 0
+                ? `${selectedUserIds.length} selected`
+                : "Add team members..."}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-0" align="start">
+            <div className="p-3 border-b">
+              <p className="text-sm font-medium">Select team members</p>
+            </div>
+            <div className="max-h-48 overflow-y-auto p-2">
               {availableUsers && availableUsers.length > 0 ? (
                 availableUsers.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.full_name || user.email}
-                  </SelectItem>
+                  <label
+                    key={user.id}
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedUserIds.includes(user.id)}
+                      onCheckedChange={() => toggleUser(user.id)}
+                    />
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                        {getInitials(user.full_name, user.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm truncate">{user.full_name || user.email}</span>
+                      {user.full_name && (
+                        <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+                      )}
+                    </div>
+                  </label>
                 ))
               ) : (
-                <SelectItem value="_none" disabled>
+                <p className="text-sm text-muted-foreground text-center py-3">
                   Everyone is already added
-                </SelectItem>
+                </p>
               )}
-            </SelectContent>
-          </Select>
-          <Button
-            size="icon"
-            onClick={handleAddAttendee}
-            disabled={!selectedUserId || isAdding}
-          >
-            {isAdding ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Plus className="w-4 h-4" />
+            </div>
+            {selectedUserIds.length > 0 && (
+              <div className="p-2 border-t">
+                <Button
+                  className="w-full"
+                  size="sm"
+                  onClick={handleAddSelected}
+                  disabled={isAdding}
+                >
+                  {isAdding ? (
+                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                  ) : (
+                    <Plus className="w-3 h-3 mr-1" />
+                  )}
+                  Add {selectedUserIds.length} {selectedUserIds.length === 1 ? "person" : "people"}
+                </Button>
+              </div>
             )}
-          </Button>
-        </div>
+          </PopoverContent>
+        </Popover>
 
         {/* Attendee list */}
         {attendeesLoading ? (
@@ -164,7 +196,7 @@ export function ConferenceAttendeeManager({ conferenceId }: ConferenceAttendeeMa
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-2">
-            No one tagged yet — click "I'm Going" or add a team member above
+            No one tagged yet — click "I'm Going" or add team members above
           </p>
         )}
       </CardContent>
