@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -113,6 +115,86 @@ const Calendar = () => {
       })) as CalendarEvent[];
     },
   });
+
+  // Fetch attendees for all conferences, keyed by calendar_event_id
+  const { data: attendeesByCalendarEventId = {} } = useQuery({
+    queryKey: ["calendar-conference-attendees", conferenceLinkedEventIds],
+    enabled: conferenceLinkedEventIds.length > 0,
+    queryFn: async () => {
+      // Get conferences with their calendar_event_id
+      const { data: conferences, error: confError } = await supabase
+        .from("conferences")
+        .select("id, calendar_event_id")
+        .not("calendar_event_id", "is", null);
+      if (confError) throw confError;
+
+      const conferenceIds = (conferences || []).map(c => c.id);
+      if (conferenceIds.length === 0) return {};
+
+      // Get all attendees for those conferences
+      const { data: attendees, error: attError } = await supabase
+        .from("conference_attendees")
+        .select("conference_id, profiles!conference_attendees_user_id_fkey(id, email, full_name)")
+        .in("conference_id", conferenceIds);
+      if (attError) throw attError;
+
+      // Build map: calendar_event_id → attendee profiles
+      const map: Record<string, { full_name: string | null; email: string }[]> = {};
+      for (const conf of (conferences || [])) {
+        if (!conf.calendar_event_id) continue;
+        const confAttendees = (attendees || [])
+          .filter(a => a.conference_id === conf.id)
+          .map(a => (a as any).profiles)
+          .filter(Boolean);
+        if (confAttendees.length > 0) {
+          map[conf.calendar_event_id] = confAttendees;
+        }
+      }
+      return map;
+    },
+  });
+
+  const getAttendeeInitials = (name?: string | null, email?: string) => {
+    if (name) return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+    return (email || "?")[0].toUpperCase();
+  };
+
+  const renderAttendeeAvatars = (eventId: string, size: "sm" | "md" = "sm") => {
+    const attendees = attendeesByCalendarEventId[eventId];
+    if (!attendees || attendees.length === 0) return null;
+
+    const avatarSize = size === "sm" ? "h-4 w-4" : "h-5 w-5";
+    const textSize = size === "sm" ? "text-[7px]" : "text-[9px]";
+    const overlapSpacing = size === "sm" ? "-space-x-1.5" : "-space-x-2";
+
+    return (
+      <TooltipProvider>
+        <div className={`flex ${overlapSpacing}`}>
+          {attendees.slice(0, 3).map((profile, idx) => (
+            <Tooltip key={idx}>
+              <TooltipTrigger asChild>
+                <Avatar className={`${avatarSize} border border-background`}>
+                  <AvatarFallback className={`${textSize} bg-primary/20 text-primary`}>
+                    {getAttendeeInitials(profile.full_name, profile.email)}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                {profile.full_name || profile.email}
+              </TooltipContent>
+            </Tooltip>
+          ))}
+          {attendees.length > 3 && (
+            <Avatar className={`${avatarSize} border border-background`}>
+              <AvatarFallback className={`${textSize} bg-muted text-muted-foreground`}>
+                +{attendees.length - 3}
+              </AvatarFallback>
+            </Avatar>
+          )}
+        </div>
+      </TooltipProvider>
+    );
+  };
 
   const createCalendarEventMutation = useMutation({
     mutationFn: async (newEvent: {
@@ -475,9 +557,12 @@ const Calendar = () => {
                           <Badge variant="secondary" className="text-[10px] px-1">{eventLabel}</Badge>
                           <div className="font-semibold truncate flex-1">{event.title}</div>
                         </div>
-                        <div className="text-muted-foreground flex items-center gap-1">
-                          <CalendarIcon className="h-3 w-3" />
-                          {safeFormat(event.start_date, "MMM d, yyyy")}
+                        <div className="flex items-center justify-between">
+                          <div className="text-muted-foreground flex items-center gap-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            {safeFormat(event.start_date, "MMM d, yyyy")}
+                          </div>
+                          {renderAttendeeAvatars(event.id, "sm")}
                         </div>
                         {event.registration_url && (
                           <a
@@ -674,9 +759,12 @@ const Calendar = () => {
                                     {event.event_type === "conference" ? "Conference" : event.event_type}
                                   </Badge>
                                 </div>
-                                <h3 className="font-semibold text-base mb-1">
-                                  {event.title}
-                                </h3>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold text-base">
+                                    {event.title}
+                                  </h3>
+                                  {renderAttendeeAvatars(event.id, "md")}
+                                </div>
                                 {event.description && (
                                   <p className="text-sm text-muted-foreground mb-1">
                                     {event.description}
@@ -757,9 +845,12 @@ const Calendar = () => {
                                 <Badge variant="secondary" className="text-[10px] px-1 py-0">{eventLabel}</Badge>
                                 <div className="font-medium truncate flex-1">{event.title}</div>
                               </div>
-                              {event.location && (
-                                <div className="text-muted-foreground truncate">{event.location}</div>
-                              )}
+                              <div className="flex items-center justify-between">
+                                {event.location ? (
+                                  <div className="text-muted-foreground truncate">{event.location}</div>
+                                ) : <span />}
+                                {renderAttendeeAvatars(event.id, "sm")}
+                              </div>
                             </div>
                           );
                         })}
@@ -864,7 +955,8 @@ const Calendar = () => {
                                 }}
                               >
                                 <EventIcon className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{event.title}</span>
+                                <span className="truncate flex-1">{event.title}</span>
+                                {renderAttendeeAvatars(event.id, "sm")}
                               </div>
                             );
                           })}
@@ -937,7 +1029,10 @@ const Calendar = () => {
                             <EventIcon className="h-4 w-4" style={{ color: eventColor }} />
                             <Badge variant="secondary" className="text-xs">{eventLabel}</Badge>
                           </div>
-                          <h4 className="font-semibold text-sm">{event.title}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-sm">{event.title}</h4>
+                            {renderAttendeeAvatars(event.id, "md")}
+                          </div>
                           {event.location && (
                             <p className="text-xs text-muted-foreground mt-0.5">{event.location}</p>
                           )}
