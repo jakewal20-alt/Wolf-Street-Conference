@@ -5,7 +5,7 @@ import { format, startOfWeek, startOfMonth, endOfMonth, addDays, addMonths, isTo
 import { parseDateLocal, safeFormat } from "@/utils/dateHelpers";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3, Rows3, List, Download, Plus, Loader2, Sparkles, Mail } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, Grid3x3, Rows3, List, Download, Plus, Loader2, Sparkles, Mail } from "lucide-react";
 import { OutlookSyncButton } from "@/components/calendar/OutlookSyncButton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -61,6 +61,7 @@ const Calendar = () => {
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showDayEventsDialog, setShowDayEventsDialog] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set());
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -73,6 +74,20 @@ const Calendar = () => {
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
   const calendarEnd = addDays(calendarStart, 41); // 6 weeks
   const monthDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
+  // Split month days into week rows (6 weeks of 7 days)
+  const monthWeeks: Date[][] = [];
+  for (let i = 0; i < monthDays.length; i += 7) {
+    monthWeeks.push(monthDays.slice(i, i + 7));
+  }
+
+  const toggleWeek = (weekIndex: number) => {
+    setExpandedWeeks(prev => {
+      const next = new Set(prev);
+      next.has(weekIndex) ? next.delete(weekIndex) : next.add(weekIndex);
+      return next;
+    });
+  };
 
   // Fetch conference-linked calendar event IDs (used to hide orphan duplicates)
   const { data: conferenceLinkedEventIds = [] } = useQuery({
@@ -877,97 +892,132 @@ const Calendar = () => {
                   ))}
                 </div>
 
-                {/* Month grid */}
-                <div className="grid grid-cols-7 gap-2">
-                  {monthDays.map((day, index) => {
-                    const dayEvents = getCalendarEventsForDay(day);
-                    const isCurrentDay = isToday(day);
-                    const isPastDay = isPast(day) && !isCurrentDay;
-                    const isCurrentMonth = day >= monthStart && day <= monthEnd;
-                    const hasItems = dayEvents.length > 0;
+                {/* Month grid — one row per week */}
+                <div className="space-y-2">
+                  {monthWeeks.map((week, weekIndex) => {
+                    const isExpanded = expandedWeeks.has(weekIndex);
+                    const weekEventCount = week.reduce((sum, day) => sum + getCalendarEventsForDay(day).length, 0);
 
                     return (
-                      <div
-                        key={day.toISOString()}
-                        id={format(day, "yyyy-MM-dd")}
-                        className={cn(
-                          "min-h-[120px] rounded-xl p-2 space-y-1 cursor-pointer",
-                          "border transition-all duration-300 ease-out",
-                          "hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5",
-                          "group relative overflow-hidden",
-                          isCurrentDay && "border-primary border-2 bg-primary/5 shadow-md ring-2 ring-primary/20",
-                          isPastDay && "bg-muted/20 hover:bg-muted/30",
-                          !isCurrentMonth && "opacity-30 hover:opacity-50",
-                          !isCurrentDay && !isPastDay && isCurrentMonth && "border-border/50 hover:border-primary/50 bg-card/50",
-                          hasItems && !isCurrentDay && "border-accent/30"
-                        )}
-                        style={{ animationDelay: `${index * 10}ms` }}
-                        onClick={() => handleDateClick(day)}
-                      >
-                        {/* Hover gradient overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
-                        {/* Day number */}
-                        <div className={cn(
-                          "text-sm font-bold relative z-10 flex items-center justify-between",
-                          isCurrentDay && "text-primary",
-                          !isCurrentMonth && "text-muted-foreground/50"
-                        )}>
-                          <span className={cn(
-                            "w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200",
-                            isCurrentDay && "bg-primary text-primary-foreground shadow-md",
-                            !isCurrentDay && "group-hover:bg-accent/50"
-                          )}>
-                            {format(day, "d")}
-                          </span>
-                          {hasItems && !isCurrentDay && (
-                            <span className="flex gap-0.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                            </span>
+                      <div key={weekIndex} className="relative">
+                        {/* Expand/collapse toggle */}
+                        <button
+                          type="button"
+                          onClick={() => toggleWeek(weekIndex)}
+                          className={cn(
+                            "absolute -left-7 top-1/2 -translate-y-1/2 z-20",
+                            "w-5 h-5 rounded-full flex items-center justify-center",
+                            "text-muted-foreground hover:text-foreground hover:bg-muted",
+                            "transition-all duration-200",
+                            isExpanded && "text-primary"
                           )}
-                        </div>
+                          title={isExpanded ? "Collapse week" : `Expand week (${weekEventCount} events)`}
+                        >
+                          <ChevronDown className={cn(
+                            "h-4 w-4 transition-transform duration-200",
+                            !isExpanded && "-rotate-90"
+                          )} />
+                        </button>
 
-                        {/* Events list */}
-                        <div className="space-y-1 relative z-10">
-                          {dayEvents.slice(0, 2).map((event, eventIndex) => {
-                            const effectiveType = event.type ?? event.event_type;
-                            const eventColor = getEventColor(event.color_hex, effectiveType);
-                            const EventIcon = getEventIcon(event.icon_name, effectiveType);
+                        {/* Week row grid */}
+                        <div className="grid grid-cols-7 gap-2">
+                          {week.map((day, dayIndex) => {
+                            const globalIndex = weekIndex * 7 + dayIndex;
+                            const dayEvents = getCalendarEventsForDay(day);
+                            const isCurrentDay = isToday(day);
+                            const isPastDay = isPast(day) && !isCurrentDay;
+                            const isCurrentMonth = day >= monthStart && day <= monthEnd;
+                            const hasItems = dayEvents.length > 0;
+                            const visibleEvents = isExpanded ? dayEvents : dayEvents.slice(0, 2);
+                            const hiddenCount = dayEvents.length - visibleEvents.length;
 
                             return (
                               <div
-                                key={event.id}
+                                key={day.toISOString()}
+                                id={format(day, "yyyy-MM-dd")}
                                 className={cn(
-                                  "text-xs p-1.5 rounded-md truncate cursor-pointer flex items-center gap-1",
-                                  "transition-all duration-200 ease-out",
-                                  "hover:shadow-md hover:scale-[1.03]",
-                                  "animate-fade-in"
+                                  "rounded-xl p-2 space-y-1 cursor-pointer",
+                                  "border transition-all duration-300 ease-out",
+                                  "hover:shadow-lg hover:scale-[1.02] hover:-translate-y-0.5",
+                                  "group relative overflow-hidden",
+                                  isExpanded ? "min-h-[80px]" : "min-h-[120px]",
+                                  isCurrentDay && "border-primary border-2 bg-primary/5 shadow-md ring-2 ring-primary/20",
+                                  isPastDay && "bg-muted/20 hover:bg-muted/30",
+                                  !isCurrentMonth && "opacity-30 hover:opacity-50",
+                                  !isCurrentDay && !isPastDay && isCurrentMonth && "border-border/50 hover:border-primary/50 bg-card/50",
+                                  hasItems && !isCurrentDay && "border-accent/30"
                                 )}
-                                style={{
-                                  backgroundColor: `${eventColor}20`,
-                                  borderLeft: `3px solid ${eventColor}`,
-                                  color: eventColor,
-                                  animationDelay: `${eventIndex * 50}ms`
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEventClick(event);
-                                }}
+                                style={{ animationDelay: `${globalIndex * 10}ms` }}
+                                onClick={() => handleDateClick(day)}
                               >
-                                <EventIcon className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate flex-1">{event.title}</span>
-                                {renderAttendeeAvatars(event.id, "sm")}
+                                {/* Hover gradient overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                                {/* Day number */}
+                                <div className={cn(
+                                  "text-sm font-bold relative z-10 flex items-center justify-between",
+                                  isCurrentDay && "text-primary",
+                                  !isCurrentMonth && "text-muted-foreground/50"
+                                )}>
+                                  <span className={cn(
+                                    "w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200",
+                                    isCurrentDay && "bg-primary text-primary-foreground shadow-md",
+                                    !isCurrentDay && "group-hover:bg-accent/50"
+                                  )}>
+                                    {format(day, "d")}
+                                  </span>
+                                  {hasItems && !isCurrentDay && (
+                                    <span className="flex gap-0.5">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Events list */}
+                                <div className="space-y-1 relative z-10">
+                                  {visibleEvents.map((event, eventIndex) => {
+                                    const effectiveType = event.type ?? event.event_type;
+                                    const eventColor = getEventColor(event.color_hex, effectiveType);
+                                    const EventIcon = getEventIcon(event.icon_name, effectiveType);
+
+                                    return (
+                                      <div
+                                        key={event.id}
+                                        className={cn(
+                                          "text-xs p-1.5 rounded-md truncate cursor-pointer flex items-center gap-1",
+                                          "transition-all duration-200 ease-out",
+                                          "hover:shadow-md hover:scale-[1.03]",
+                                          "animate-fade-in"
+                                        )}
+                                        style={{
+                                          backgroundColor: `${eventColor}20`,
+                                          borderLeft: `3px solid ${eventColor}`,
+                                          color: eventColor,
+                                          animationDelay: `${eventIndex * 50}ms`
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEventClick(event);
+                                        }}
+                                      >
+                                        <EventIcon className="h-3 w-3 flex-shrink-0" />
+                                        <span className="truncate flex-1">{event.title}</span>
+                                        {renderAttendeeAvatars(event.id, "sm")}
+                                      </div>
+                                    );
+                                  })}
+                                  {hiddenCount > 0 && (
+                                    <div className={cn(
+                                      "text-xs text-muted-foreground text-center py-0.5 rounded-md",
+                                      "bg-muted/50 group-hover:bg-primary/10 transition-colors"
+                                    )}>
+                                      +{hiddenCount} more
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
-                          {dayEvents.length > 2 && (
-                            <div className={cn(
-                              "text-xs text-muted-foreground text-center py-0.5 rounded-md",
-                              "bg-muted/50 group-hover:bg-primary/10 transition-colors"
-                            )}>
-                              +{dayEvents.length - 2} more
-                            </div>
-                          )}
                         </div>
                       </div>
                     );
