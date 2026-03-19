@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Users, Download, ExternalLink, CalendarDays, Trash2, Mail, Loader2, Archive, ArchiveRestore, Pencil, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Download, ExternalLink, CalendarDays, Trash2, Mail, Loader2, Archive, ArchiveRestore, Pencil, ChevronDown, ChevronRight, Globe, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -32,6 +32,8 @@ import { EditConferenceDialog } from "@/components/conferences/EditConferenceDia
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageLayout, PageHeader } from "@/components/PageLayout";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConferenceAttendeeBadges } from "@/components/conferences/ConferenceAttendees";
 
 export default function Conferences() {
@@ -449,12 +451,73 @@ export default function Conferences() {
         </div>
       )}
 
-      {/* Leads Panel - Full width on mobile, stacked below conferences */}
-      {selectedConference && (
-        <div className="animate-fade-in">
-          <ConferenceLeadsPanel conference={selectedConference} />
-        </div>
-      )}
+      {/* Conference Detail Sheet */}
+      <Sheet open={!!selectedConference} onOpenChange={(open) => { if (!open) setSelectedConferenceId(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
+          {selectedConference && (() => {
+            const status = getConferenceStatus(selectedConference.start_date, selectedConference.end_date);
+            return (
+              <>
+                <SheetHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+                  <div className="flex items-start justify-between gap-3 pr-8">
+                    <div className="space-y-1 min-w-0">
+                      <SheetTitle className="text-xl font-bold leading-tight">{selectedConference.name}</SheetTitle>
+                      <SheetDescription className="flex flex-wrap items-center gap-3 text-sm">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {safeFormat(selectedConference.start_date, "MMM d")} – {safeFormat(selectedConference.end_date, "MMM d, yyyy")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5" />
+                          {selectedConference.location}
+                        </span>
+                      </SheetDescription>
+                    </div>
+                    <Badge className={`shrink-0 ${status.className}`}>{status.label}</Badge>
+                  </div>
+
+                  {/* Description */}
+                  {selectedConference.description && (
+                    <div className="mt-3 text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <FileText className="w-4 h-4 mt-0.5 shrink-0" />
+                        <p className="whitespace-pre-wrap">{selectedConference.description}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick info row */}
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    {selectedConference.source_url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => window.open(selectedConference.source_url, '_blank')}
+                      >
+                        <Globe className="w-3 h-3 mr-1" />
+                        Website
+                      </Button>
+                    )}
+                    {selectedConference.tags && selectedConference.tags.length > 0 && (
+                      selectedConference.tags.map((tag: string, idx: number) => (
+                        <Badge key={idx} variant="outline" className="text-xs">{tag}</Badge>
+                      ))
+                    )}
+                    <ConferenceAttendeeBadges conferenceId={selectedConference.id} />
+                  </div>
+                </SheetHeader>
+
+                <ScrollArea className="flex-1 overflow-y-auto">
+                  <div className="p-6">
+                    <ConferenceLeadsPanel conference={selectedConference} />
+                  </div>
+                </ScrollArea>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
 
       <AddConferenceDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
       <ImportCalendarEventsDialog open={showImportDialog} onOpenChange={setShowImportDialog} />
