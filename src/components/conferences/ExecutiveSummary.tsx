@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, FileText, TrendingUp, Users, Target, Briefcase, CheckCircle2, Download, Pencil, Save, X, MessageSquare, ClipboardList } from "lucide-react";
 import { useState } from "react";
 import { safeDate } from "@/utils/dateHelpers";
@@ -24,6 +26,18 @@ export function ExecutiveSummary({ conference }: ExecutiveSummaryProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [editedSummary, setEditedSummary] = useState<any>(null);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportSections, setExportSections] = useState({
+    headline: true,
+    overview: true,
+    metrics: true,
+    themes: true,
+    topLeads: true,
+    opportunities: true,
+    recommendations: true,
+  });
+  const [exportSelectedLeadIds, setExportSelectedLeadIds] = useState<Set<number>>(new Set());
+  const [exportType, setExportType] = useState<"summary" | "leads">("summary");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -82,38 +96,54 @@ export function ExecutiveSummary({ conference }: ExecutiveSummaryProps) {
     }
   };
 
+  const downloadPdfBase64 = (base64: string, filename: string) => {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleOpenExportDialog = (type: "summary" | "leads") => {
+    setExportType(type);
+    // Default all sections on, all leads selected
+    setExportSections({
+      headline: true,
+      overview: true,
+      metrics: true,
+      themes: true,
+      topLeads: true,
+      opportunities: true,
+      recommendations: true,
+    });
+    const topLeads = summary?.top_leads || [];
+    setExportSelectedLeadIds(new Set(topLeads.map((_: any, i: number) => i)));
+    setShowExportDialog(true);
+  };
+
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
       const { data, error } = await supabase.functions.invoke('export-conference-summary-pdf', {
-        body: { conferenceId: conference.id }
+        body: { conferenceId: conference.id, sections: exportSections, selectedLeadIndices: Array.from(exportSelectedLeadIds) }
       });
 
       if (error) throw error;
+      if (!data.pdfBase64) throw new Error("No PDF data returned");
 
-      if (!data.pdfBase64) {
-        throw new Error("No PDF data returned");
-      }
-
-      // Convert base64 to blob and download
-      const byteCharacters = atob(data.pdfBase64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${conference.name.replace(/[^a-zA-Z0-9]/g, '_')}_Executive_Summary.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
+      downloadPdfBase64(data.pdfBase64, `${conference.name.replace(/[^a-zA-Z0-9]/g, '_')}_Executive_Summary.pdf`);
       toastSuccess("PDF exported successfully");
+      setShowExportDialog(false);
     } catch (error) {
       console.error('Error exporting PDF:', error);
       toastError("Failed to export PDF");
@@ -126,30 +156,15 @@ export function ExecutiveSummary({ conference }: ExecutiveSummaryProps) {
     setIsExportingLeads(true);
     try {
       const { data, error } = await supabase.functions.invoke('export-lead-report-pdf', {
-        body: { conferenceId: conference.id }
+        body: { conferenceId: conference.id, selectedLeadIndices: Array.from(exportSelectedLeadIds) }
       });
 
       if (error) throw error;
       if (!data.pdfBase64) throw new Error("No PDF data returned");
 
-      const byteCharacters = atob(data.pdfBase64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${conference.name.replace(/[^a-zA-Z0-9]/g, '_')}_Lead_Report.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
+      downloadPdfBase64(data.pdfBase64, `${conference.name.replace(/[^a-zA-Z0-9]/g, '_')}_Lead_Report.pdf`);
       toastSuccess("Lead report exported successfully");
+      setShowExportDialog(false);
     } catch (error) {
       console.error('Error exporting lead report:', error);
       toastError("Failed to export lead report");
@@ -231,13 +246,13 @@ export function ExecutiveSummary({ conference }: ExecutiveSummaryProps) {
                     <MessageSquare className="w-4 h-4 mr-1" />
                     AI Refine
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={isExporting}>
-                    {isExporting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
-                    PDF
+                  <Button variant="outline" size="sm" onClick={() => handleOpenExportDialog("summary")}>
+                    <Download className="w-4 h-4 mr-1" />
+                    Export Summary
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleExportLeadReport} disabled={isExportingLeads}>
-                    {isExportingLeads ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <ClipboardList className="w-4 h-4 mr-1" />}
-                    Lead Report
+                  <Button variant="outline" size="sm" onClick={() => handleOpenExportDialog("leads")}>
+                    <ClipboardList className="w-4 h-4 mr-1" />
+                    Export Leads
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleGenerate} disabled={isGenerating}>
                     {isGenerating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -468,6 +483,150 @@ export function ExecutiveSummary({ conference }: ExecutiveSummaryProps) {
         conference={conference}
         onSummaryUpdated={handleSummaryUpdated}
       />
+
+      {/* Export Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              {exportType === "summary" ? "Export Executive Summary" : "Export Lead Report"}
+            </DialogTitle>
+            <DialogDescription>
+              {exportType === "summary"
+                ? "Choose which sections to include in the PDF export."
+                : "Choose which leads to include in the report."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {exportType === "summary" ? (
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-muted-foreground">Sections to include:</p>
+              <div className="space-y-3">
+                {[
+                  { key: "headline" as const, label: "Headline" },
+                  { key: "overview" as const, label: "Conference Overview" },
+                  { key: "metrics" as const, label: "Key Metrics" },
+                  { key: "themes" as const, label: "Strategic Themes" },
+                  { key: "topLeads" as const, label: "Top Leads" },
+                  { key: "opportunities" as const, label: "Opportunities Created" },
+                  { key: "recommendations" as const, label: "Executive Recommendations" },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-md p-2 -mx-2">
+                    <Checkbox
+                      checked={exportSections[key]}
+                      onCheckedChange={(checked) =>
+                        setExportSections(prev => ({ ...prev, [key]: !!checked }))
+                      }
+                    />
+                    <span className="text-sm">{label}</span>
+                  </label>
+                ))}
+              </div>
+
+              {/* If top leads section is checked, show individual lead picker */}
+              {exportSections.topLeads && summary?.top_leads?.length > 0 && (
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-muted-foreground">Select individual leads:</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        const allIds = summary.top_leads.map((_: any, i: number) => i);
+                        setExportSelectedLeadIds(prev =>
+                          prev.size === summary.top_leads.length ? new Set() : new Set(allIds)
+                        );
+                      }}
+                    >
+                      {exportSelectedLeadIds.size === summary.top_leads.length ? "Deselect All" : "Select All"}
+                    </Button>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {summary.top_leads.map((lead: any, idx: number) => (
+                      <label key={idx} className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-md p-2 -mx-2">
+                        <Checkbox
+                          checked={exportSelectedLeadIds.has(idx)}
+                          onCheckedChange={(checked) => {
+                            setExportSelectedLeadIds(prev => {
+                              const next = new Set(prev);
+                              checked ? next.add(idx) : next.delete(idx);
+                              return next;
+                            });
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{lead.contact_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {lead.title} at {lead.company}
+                            {lead.ai_fit_score != null && ` · Fit: ${lead.ai_fit_score}`}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Lead Report: show lead picker */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-muted-foreground">Select leads to include:</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    const allIds = (summary?.top_leads || []).map((_: any, i: number) => i);
+                    setExportSelectedLeadIds(prev =>
+                      prev.size === allIds.length ? new Set() : new Set(allIds)
+                    );
+                  }}
+                >
+                  {exportSelectedLeadIds.size === (summary?.top_leads?.length || 0) ? "Deselect All" : "Select All"}
+                </Button>
+              </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {(summary?.top_leads || []).map((lead: any, idx: number) => (
+                  <label key={idx} className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-md p-2 -mx-2">
+                    <Checkbox
+                      checked={exportSelectedLeadIds.has(idx)}
+                      onCheckedChange={(checked) => {
+                        setExportSelectedLeadIds(prev => {
+                          const next = new Set(prev);
+                          checked ? next.add(idx) : next.delete(idx);
+                          return next;
+                        });
+                      }}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{lead.contact_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {lead.title} at {lead.company}
+                        {lead.ai_fit_score != null && ` · Fit: ${lead.ai_fit_score}`}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExportDialog(false)}>Cancel</Button>
+            <Button
+              onClick={exportType === "summary" ? handleExportPDF : handleExportLeadReport}
+              disabled={isExporting || isExportingLeads}
+            >
+              {(isExporting || isExportingLeads) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Download className="w-4 h-4 mr-2" />
+              Export PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

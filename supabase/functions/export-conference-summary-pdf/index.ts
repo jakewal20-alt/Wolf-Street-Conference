@@ -6,8 +6,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface ExportSections {
+  headline?: boolean;
+  overview?: boolean;
+  metrics?: boolean;
+  themes?: boolean;
+  topLeads?: boolean;
+  opportunities?: boolean;
+  recommendations?: boolean;
+}
+
 // Professional multi-page PDF generation
-function generatePDF(conference: any): Uint8Array {
+function generatePDF(conference: any, sections?: ExportSections, selectedLeadIndices?: number[]): Uint8Array {
+  // Default all sections to true if not provided
+  const s = {
+    headline: sections?.headline !== false,
+    overview: sections?.overview !== false,
+    metrics: sections?.metrics !== false,
+    themes: sections?.themes !== false,
+    topLeads: sections?.topLeads !== false,
+    opportunities: sections?.opportunities !== false,
+    recommendations: sections?.recommendations !== false,
+  };
   const summary = conference.exec_summary;
   
   const pageWidth = 612;
@@ -86,7 +106,7 @@ function generatePDF(conference: any): Uint8Array {
   y = pageHeight - 130;
 
   // Headline
-  if (summary.headline) {
+  if (s.headline && summary.headline) {
     checkSpace(70);
     addToPage(`0.95 0.97 1 rg`);
     addToPage(`${marginLeft - 10} ${y - 40} ${contentWidth + 20} 55 re f`);
@@ -103,7 +123,7 @@ function generatePDF(conference: any): Uint8Array {
   }
 
   // Conference Overview
-  if (summary.conference_overview) {
+  if (s.overview && summary.conference_overview) {
     checkSpace(50);
     y -= sectionGap;
     addToPage(`0.2 0.4 0.8 RG`);
@@ -121,7 +141,7 @@ function generatePDF(conference: any): Uint8Array {
   }
 
   // Key Metrics
-  if (summary.key_metrics) {
+  if (s.metrics && summary.key_metrics) {
     checkSpace(80);
     y -= sectionGap;
     addToPage(`0.2 0.4 0.8 RG`);
@@ -156,7 +176,7 @@ function generatePDF(conference: any): Uint8Array {
   }
 
   // Strategic Themes
-  if (summary.strategic_themes?.length > 0) {
+  if (s.themes && summary.strategic_themes?.length > 0) {
     checkSpace(50);
     y -= sectionGap;
     addToPage(`0.2 0.4 0.8 RG`);
@@ -175,7 +195,7 @@ function generatePDF(conference: any): Uint8Array {
   }
 
   // Top Leads (show up to 6)
-  if (summary.top_leads?.length > 0) {
+  if (s.topLeads && summary.top_leads?.length > 0) {
     checkSpace(50);
     y -= sectionGap;
     addToPage(`0.2 0.4 0.8 RG`);
@@ -183,8 +203,11 @@ function generatePDF(conference: any): Uint8Array {
     addToPage(`${marginLeft} ${y + 4} m ${marginLeft + 40} ${y + 4} l S`);
     addToPage(`BT 0.2 0.4 0.8 rg /F2 11 Tf ${marginLeft} ${y - 10} Td (TOP LEADS) Tj ET`);
     y -= 28;
-    
-    const leadsToShow = summary.top_leads.slice(0, 6);
+
+    // Filter leads by selected indices if provided, otherwise show up to 6
+    const leadsToShow = selectedLeadIndices && selectedLeadIndices.length > 0
+      ? selectedLeadIndices.map(i => summary.top_leads[i]).filter(Boolean)
+      : summary.top_leads.slice(0, 6);
     for (const lead of leadsToShow) {
       checkSpace(50);
       const nameTitle = `${lead.contact_name || 'Unknown'}${lead.title ? `, ${lead.title}` : ''}`;
@@ -209,7 +232,7 @@ function generatePDF(conference: any): Uint8Array {
   }
 
   // Next Steps (renamed from Executive Recommendations)
-  if (summary.exec_recommendations?.length > 0) {
+  if (s.recommendations && summary.exec_recommendations?.length > 0) {
     checkSpace(50);
     y -= sectionGap;
     addToPage(`0.2 0.4 0.8 RG`);
@@ -316,7 +339,7 @@ serve(async (req) => {
   }
 
   try {
-    const { conferenceId } = await req.json();
+    const { conferenceId, sections, selectedLeadIndices } = await req.json();
     console.log(`[export-conference-summary-pdf] Exporting PDF for conference: ${conferenceId}`);
 
     if (!conferenceId) {
@@ -360,7 +383,7 @@ serve(async (req) => {
       );
     }
 
-    const pdfBytes = generatePDF(conference);
+    const pdfBytes = generatePDF(conference, sections, selectedLeadIndices);
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
 
     console.log(`[export-conference-summary-pdf] PDF generated successfully, size: ${pdfBytes.length} bytes`);

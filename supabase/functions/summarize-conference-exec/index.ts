@@ -194,6 +194,25 @@ Return a JSON array where each element has:
       id: o.id
     }));
 
+    // Fetch voice recaps for this conference
+    const { data: voiceRecaps } = await supabase
+      .from('conference_voice_recaps')
+      .select('transcript, ai_summary, lead_id')
+      .eq('conference_id', conferenceId)
+      .not('ai_summary', 'is', null);
+
+    let voiceRecapContext = '';
+    if (voiceRecaps && voiceRecaps.length > 0) {
+      voiceRecapContext = `
+Voice Recaps from Team (${voiceRecaps.length} recordings):
+${voiceRecaps.map((r, i) => {
+  const linkedLead = r.lead_id ? leads?.find(l => l.id === r.lead_id) : null;
+  return `${i+1}. ${linkedLead ? `Re: ${linkedLead.contact_name} at ${linkedLead.company}` : 'General Recap'}
+   Summary: ${r.ai_summary}`;
+}).join('\n')}
+`;
+    }
+
     // Extract partner insights if available
     const websiteData = conference.website_data || {};
     const partnerInsights = websiteData.partner_insights || null;
@@ -214,12 +233,13 @@ Partner Analysis:
 `;
     }
 
-    const prompt = `You are an executive assistant preparing a conference summary for senior leadership. Generate a concise, metrics-driven executive summary for the following conference.
+    const prompt = `You are an executive assistant preparing a conference debrief for senior leadership at a defense technology company (Accelint). Generate a thorough, metrics-driven executive summary. Be specific — reference actual names, companies, and conversations. Avoid generic filler.
 
 Conference Details:
 - Name: ${conference.name}
 - Dates: ${conference.start_date} to ${conference.end_date}
 - Location: ${conference.location}
+- Description: ${conference.description || 'N/A'}
 - Tags: ${conference.tags?.join(', ') || 'None'}
 
 Leads Captured (${leadsSummary.length} total):
@@ -227,7 +247,9 @@ ${JSON.stringify(leadsSummary, null, 2)}
 
 Opportunities Created (${opportunitiesSummary.length} total):
 ${JSON.stringify(opportunitiesSummary, null, 2)}
-${partnerContext}
+${voiceRecapContext}${partnerContext}
+IMPORTANT: Use voice recaps as first-person field intelligence — they capture what the team actually heard and observed on the floor. Weight these heavily for strategic themes and recommendations.
+
 Generate a JSON response with this exact structure:
 {
   "headline": "1-2 sentence headline capturing the key outcome (e.g., 'I/ITSEC 2025 generated 12 high-value leads in AI training and C2 solutioning with 3 immediate opportunities.')",
@@ -283,12 +305,13 @@ CRITICAL RULES:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        max_tokens: 2000,
+        model: 'gpt-4o',
+        max_tokens: 4000,
+        temperature: 0.3,
         messages: [
           {
             role: 'system',
-            content: 'You are an executive assistant creating concise, metrics-driven summaries for senior leadership. Always return valid JSON that matches the requested structure.'
+            content: 'You are an executive assistant creating thorough, specific, metrics-driven conference debriefs for defense-sector senior leadership. Reference actual people, companies, and conversations — never use generic filler. Always return valid JSON that matches the requested structure.'
           },
           {
             role: 'user',

@@ -23,7 +23,7 @@ serve(async (req) => {
   }
 
   try {
-    const { conferenceId } = await req.json();
+    const { conferenceId, selectedLeadIndices } = await req.json();
     if (!conferenceId) {
       return new Response(
         JSON.stringify({ error: 'Missing conferenceId' }),
@@ -76,13 +76,18 @@ serve(async (req) => {
       );
     }
 
+    // Filter leads by selected indices if provided
+    const filteredLeads = selectedLeadIndices && selectedLeadIndices.length > 0
+      ? selectedLeadIndices.map((i: number) => leads[i]).filter(Boolean)
+      : leads;
+
     // Get BD persona for context
     const token = authHeader.replace('Bearer ', '');
     const { data: { user } } = await supabase.auth.getUser(token);
     const personaPrefix = user ? await getPersonaPromptPrefix(supabase, user.id) : '';
 
     // Build lead data for AI
-    const leadDataForAI = leads.map((l: any, idx: number) => ({
+    const leadDataForAI = filteredLeads.map((l: any, idx: number) => ({
       index: idx + 1,
       name: l.contact_name,
       title: l.title || 'N/A',
@@ -95,7 +100,7 @@ serve(async (req) => {
       phone: l.phone || '',
     }));
 
-    console.log(`[export-lead-report-pdf] Generating AI summaries for ${leads.length} leads`);
+    console.log(`[export-lead-report-pdf] Generating AI summaries for ${filteredLeads.length} leads`);
 
     // Call OpenAI to generate per-lead summaries
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -113,7 +118,7 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Conference: ${conference.name}\nLocation: ${conference.location}\nDates: ${conference.start_date} to ${conference.end_date}\n\nHere are ALL ${leads.length} leads:\n${JSON.stringify(leadDataForAI, null, 2)}`
+            content: `Conference: ${conference.name}\nLocation: ${conference.location}\nDates: ${conference.start_date} to ${conference.end_date}\n\nHere are ALL ${filteredLeads.length} leads:\n${JSON.stringify(leadDataForAI, null, 2)}`
           }
         ],
         temperature: 0.4,
@@ -138,7 +143,7 @@ serve(async (req) => {
     } catch {
       console.error('[export-lead-report-pdf] Failed to parse AI response:', content);
       // Fallback: use raw lead data without AI summaries
-      leadSummaries = leads.map((l: any) => ({
+      leadSummaries = filteredLeads.map((l: any) => ({
         contact_name: l.contact_name,
         title: l.title || '',
         company: l.company,

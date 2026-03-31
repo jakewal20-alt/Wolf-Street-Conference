@@ -81,8 +81,8 @@ Please process this feedback and return your response as JSON.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        max_tokens: 2000,
+        model: 'gpt-4o',
+        max_tokens: 4000,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
