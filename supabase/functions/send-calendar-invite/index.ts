@@ -1,5 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { Resend } from 'https://esm.sh/resend@4.0.0';
+import { authenticate, requireConferenceAccess, escapeHtml } from '../_shared/auth.ts';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
 const FROM_EMAIL = Deno.env.get('EMAIL_FROM_ADDRESS') || 'Wolf Street <calendar@resend.dev>';
@@ -141,13 +141,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { event_id, test_email } = await req.json();
-    
+    const auth = await authenticate(req, corsHeaders);
+    if (auth instanceof Response) return auth;
+
+    // test_email: a custom address chosen by the event owner in the Calendar UI.
+    // recipient_user_id: a registered teammate (attendee invites).
+    const { event_id, test_email, recipient_user_id } = await req.json();
+
     console.log('Processing calendar invite for event:', event_id);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = auth.admin;
 
     // Fetch the event
     const { data: event, error: eventError } = await supabase
@@ -159,9 +162,61 @@ Deno.serve(async (req) => {
     if (eventError || !event) {
       console.error('Error fetching event:', eventError);
       return new Response(
-        JSON.stringify({ error: 'Event not found', details: eventError }),
+        JSON.stringify({ error: 'Event not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Caller must own the event, be an admin, or have access to the
+    // conference this event is linked to.
+    let canSend = auth.isAdmin || event.user_id === auth.user.id;
+    if (!canSend) {
+      const { data: linkedConf } = await supabase
+        .from('conferences')
+        .select('id')
+        .eq('calendar_event_id', event_id)
+        .limit(1)
+        .maybeSingle();
+      if (linkedConf) {
+        canSend = (await requireConferenceAccess(auth, linkedConf.id, corsHeaders)) === null;
+      }
+    }
+    if (!canSend) {
+      return new Response(
+        JSON.stringify({ error: 'Event not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Only the event owner may send to an arbitrary address (anyone may send to themselves).
+    const isSelf = typeof test_email === 'string' && test_email.toLowerCase() === auth.user.email?.toLowerCase();
+    if (test_email && !isSelf && event.user_id !== auth.user.id) {
+      return new Response(
+        JSON.stringify({ error: 'Only the event owner can send to a custom address' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (test_email && (typeof test_email !== 'string' || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(test_email))) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email address' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let teammateEmail: string | null = null;
+    if (recipient_user_id) {
+      const { data: teammate } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', recipient_user_id)
+        .maybeSingle();
+      if (!teammate?.email) {
+        return new Response(
+          JSON.stringify({ error: 'Recipient not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      teammateEmail = teammate.email;
     }
 
     // Fetch the user's email
@@ -174,13 +229,13 @@ Deno.serve(async (req) => {
     if (profileError || !profile) {
       console.error('Error fetching user profile:', profileError);
       return new Response(
-        JSON.stringify({ error: 'User profile not found', details: profileError }),
+        JSON.stringify({ error: 'User profile not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Priority: test_email > event.invite_email > profile.email
-    const recipientEmail = test_email || event.invite_email || profile.email;
+    // Priority: teammate > custom address > event.invite_email > owner's email
+    const recipientEmail = teammateEmail || test_email || event.invite_email || profile.email;
     const organizerEmail = profile.email;
     
     console.log('Sending invite to:', recipientEmail, '(invite_email:', event.invite_email, ')');
@@ -202,10 +257,10 @@ Deno.serve(async (req) => {
             <h1 style="color: #1a1a1a; font-size: 24px; margin-bottom: 20px;">📅 New Calendar Event</h1>
             
             <div style="background-color: #f8f9fa; border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 20px; border-radius: 0 4px 4px 0;">
-              <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 10px 0;">${event.title}</h2>
+              <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 10px 0;">${escapeHtml(event.title)}</h2>
               <p style="color: #4a5568; margin: 5px 0;"><strong>When:</strong> ${formatDateForEmail(event as CalendarEvent)}</p>
-              ${event.location ? `<p style="color: #4a5568; margin: 5px 0;"><strong>Where:</strong> ${event.location}</p>` : ''}
-              ${event.description ? `<p style="color: #4a5568; margin: 10px 0 0 0;">${event.description}</p>` : ''}
+              ${event.location ? `<p style="color: #4a5568; margin: 5px 0;"><strong>Where:</strong> ${escapeHtml(event.location)}</p>` : ''}
+              ${event.description ? `<p style="color: #4a5568; margin: 10px 0 0 0;">${escapeHtml(event.description)}</p>` : ''}
             </div>
             
             <p style="color: #4a5568; font-size: 14px;">

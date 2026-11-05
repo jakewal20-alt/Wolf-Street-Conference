@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { authenticate } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,8 @@ serve(async (req) => {
   }
 
   try {
+    const auth = await authenticate(req, corsHeaders);
+    if (auth instanceof Response) return auth;
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");
@@ -21,6 +24,12 @@ serve(async (req) => {
 
     if (!imageFile) {
       throw new Error("No image file provided");
+    }
+    if (imageFile.size > 10 * 1024 * 1024) {
+      return new Response(JSON.stringify({ error: "Image too large (max 10 MB)" }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Convert image to base64 in chunks to avoid stack overflow

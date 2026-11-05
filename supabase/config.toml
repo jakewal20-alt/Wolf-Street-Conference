@@ -28,7 +28,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-calendar-invite]
-verify_jwt = false
+verify_jwt = true
 
 [functions.summarize-conference-exec]
 verify_jwt = true

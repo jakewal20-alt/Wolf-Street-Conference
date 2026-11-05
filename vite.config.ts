@@ -17,9 +17,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png"],
       manifest: {
-        name: "Wolf Street - Business Development Intelligence",
+        name: "Wolf Street - Relationship Intelligence",
         short_name: "Wolf Street",
-        description: "AI-powered business development platform for government contracting opportunities",
+        description: "Relationship and activity intelligence for business development teams",
         theme_color: "#1e3a5f",
         background_color: "#ffffff",
         display: "standalone",

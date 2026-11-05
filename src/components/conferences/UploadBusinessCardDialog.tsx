@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadUserFile } from "@/lib/storage";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Upload, Loader2 } from "lucide-react";
@@ -88,18 +89,7 @@ export function UploadBusinessCardDialog({
       // Upload image to storage
       let cardImageUrl = null;
       if (selectedFile) {
-        const fileName = `${user.id}/${Date.now()}_${selectedFile.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("meeting-transcripts")
-          .upload(fileName, selectedFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from("meeting-transcripts")
-          .getPublicUrl(fileName);
-
-        cardImageUrl = urlData.publicUrl;
+        cardImageUrl = await uploadUserFile(user.id, selectedFile.name, selectedFile);
       }
 
       const { error } = await supabase.from("conference_leads").insert({

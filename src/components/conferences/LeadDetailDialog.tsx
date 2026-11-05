@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, Building2, User, Calendar, ImageIcon } from "lucide-react";
 import { safeFormat } from "@/utils/dateHelpers";
+import { useSignedFileUrl } from "@/lib/storage";
 
 interface LeadDetailDialogProps {
   open: boolean;
@@ -10,6 +11,7 @@ interface LeadDetailDialogProps {
 }
 
 export function LeadDetailDialog({ open, onOpenChange, lead }: LeadDetailDialogProps) {
+  const { data: cardImageSrc } = useSignedFileUrl(open ? lead?.card_image_url : null);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -82,7 +84,7 @@ export function LeadDetailDialog({ open, onOpenChange, lead }: LeadDetailDialogP
             </div>
           )}
 
-          {lead.card_image_url && (
+          {cardImageSrc && (
             <div>
               <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                 <ImageIcon className="w-4 h-4" />
@@ -90,7 +92,7 @@ export function LeadDetailDialog({ open, onOpenChange, lead }: LeadDetailDialogP
               </h4>
               <div className="rounded-lg overflow-hidden border">
                 <img
-                  src={lead.card_image_url}
+                  src={cardImageSrc}
                   alt="Business card"
                   className="w-full h-auto"
                 />

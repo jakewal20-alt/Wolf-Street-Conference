@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { authenticate, tooLarge } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const auth = await authenticate(req, corsHeaders);
+    if (auth instanceof Response) return auth;
     const { transcript } = await req.json();
+    const oversized = tooLarge(transcript, 100000, corsHeaders);
+    if (oversized) return oversized;
 
     if (!transcript || typeof transcript !== "string" || transcript.trim().length === 0) {
       return new Response(

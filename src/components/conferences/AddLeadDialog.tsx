@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadUserFile } from "@/lib/storage";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Upload, Loader2, X } from "lucide-react";
@@ -105,18 +106,10 @@ export function AddLeadDialog({ open, onOpenChange, conferenceId }: AddLeadDialo
       // Upload business card image if present
       let uploadedCardImageUrl = cardImageUrl;
       if (selectedFile && !cardImageUrl) {
-        const fileName = `${user.id}/${Date.now()}_${selectedFile.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("meeting-transcripts")
-          .upload(fileName, selectedFile);
-
-        if (uploadError) {
+        try {
+          uploadedCardImageUrl = await uploadUserFile(user.id, selectedFile.name, selectedFile);
+        } catch (uploadError) {
           console.error("Upload error:", uploadError);
-        } else {
-          const { data: urlData } = supabase.storage
-            .from("meeting-transcripts")
-            .getPublicUrl(fileName);
-          uploadedCardImageUrl = urlData.publicUrl;
         }
       }
 

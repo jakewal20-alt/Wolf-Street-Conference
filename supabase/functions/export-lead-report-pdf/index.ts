@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPersonaPromptPrefix } from "../_shared/bd-persona.ts";
+import { authenticate, requireConferenceAccess } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,7 +24,11 @@ serve(async (req) => {
   }
 
   try {
+    const auth = await authenticate(req, corsHeaders);
+    if (auth instanceof Response) return auth;
     const { conferenceId, selectedLeadIndices } = await req.json();
+    const denied = await requireConferenceAccess(auth, conferenceId, corsHeaders);
+    if (denied) return denied;
     if (!conferenceId) {
       return new Response(
         JSON.stringify({ error: 'Missing conferenceId' }),

@@ -3276,6 +3276,7 @@ export type Database = {
     }
     Functions: {
       cleanup_expired_sam_cache: { Args: never; Returns: number }
+      get_shared_conference: { Args: { p_token: string }; Returns: Json }
       get_my_roles: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
