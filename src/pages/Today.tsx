@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { format, isToday, startOfDay } from "date-fns";
-import { parseDateLocal, safeFormat } from "@/utils/dateHelpers";
+import { safeFormat, tryParseDate } from "@/utils/dateHelpers";
 import {
   ArrowRight,
   CalendarDays,
@@ -63,7 +63,7 @@ export default function Today() {
   });
 
   // Rows with a missing or malformed date are skipped rather than crashing the page.
-  const todaysEvents = data?.events.filter((event) => !!event.start_date && isToday(parseDateLocal(event.start_date))) || [];
+  const todaysEvents = data?.events.filter((event) => (() => { const d = tryParseDate(event.start_date); return !!d && isToday(d); })()) || [];
   const nextEvents = todaysEvents.length ? todaysEvents : (data?.events.slice(0, 3) || []);
   const nextConference = data?.conferences[0];
   const conferenceLeadCount = nextConference?.conference_leads?.[0]?.count || 0;

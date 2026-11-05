@@ -96,30 +96,42 @@ function isValidDate(d: Date): boolean {
 }
 
 /**
- * Parse a date-only string (YYYY-MM-DD) as a local date, not UTC.
- * This prevents the timezone offset issue where "2025-02-01" becomes Jan 31 in local time.
- * Always returns a valid Date (falls back to current date on any error).
- * @param dateString - Date string in YYYY-MM-DD format
- * @returns Date object in local timezone
+ * Parse a date value stored as text, returning null when it can't be read.
+ *
+ * calendar_events / conferences store dates in TEXT columns, so values can be
+ * "2026-11-05", "2026-11-05T14:00:00Z", "2026-11-05 14:00:00+00",
+ * "11/5/2026", or junk. Date-only values are read as LOCAL dates (so
+ * "2025-02-01" doesn't become Jan 31 west of UTC).
+ */
+export function tryParseDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const str = String(value).trim();
+  if (!str) return null;
+
+  // Date-only: YYYY-MM-DD (optionally followed by nothing else)
+  const dateOnly = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (dateOnly) {
+    const [, y, m, d] = dateOnly.map(Number);
+    const result = new Date(y, m - 1, d);
+    return isValidDate(result) && result.getMonth() === m - 1 ? result : null;
+  }
+
+  // ISO / Postgres timestamp ("T" or space separator)
+  const iso = parseISO(str.replace(/^(\d{4}-\d{2}-\d{2}) /, "$1T"));
+  if (isValidDate(iso)) return iso;
+
+  // Anything else the browser understands (e.g. "11/5/2026", "Nov 5, 2026")
+  const loose = new Date(str);
+  return isValidDate(loose) ? loose : null;
+}
+
+/**
+ * Parse a stored date string as a local date.
+ * Always returns a valid Date (falls back to the current date when the value
+ * can't be read). Prefer tryParseDate when you need to know it failed.
  */
 export function parseDateLocal(dateString: string | null | undefined): Date {
-  // Handle null/undefined/empty strings
-  if (!dateString) {
-    return new Date();
-  }
-  // If it's already a full ISO string with time, use parseISO
-  if (dateString.includes('T')) {
-    const parsed = parseISO(dateString);
-    return isValidDate(parsed) ? parsed : new Date();
-  }
-  // For date-only strings, parse as local date by adding T00:00:00
-  // This ensures the date is interpreted in local timezone
-  const [year, month, day] = dateString.split('-').map(Number);
-  if (isNaN(year) || isNaN(month) || isNaN(day)) {
-    return new Date();
-  }
-  const result = new Date(year, month - 1, day);
-  return isValidDate(result) ? result : new Date();
+  return tryParseDate(dateString) ?? new Date();
 }
 
 /**
@@ -129,8 +141,8 @@ export function parseDateLocal(dateString: string | null | undefined): Date {
 export function safeFormat(date: Date | string | null | undefined, formatStr: string, fallback = "—"): string {
   try {
     if (!date) return fallback;
-    const d = typeof date === "string" ? parseDateLocal(date) : date;
-    if (!isValidDate(d)) return fallback;
+    const d = typeof date === "string" ? tryParseDate(date) : date;
+    if (!d || !isValidDate(d)) return fallback;
     return dateFnsFormat(d, formatStr);
   } catch {
     return fallback;
