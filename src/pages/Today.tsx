@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { format, isToday, parseISO, startOfDay } from "date-fns";
+import { format, isToday, startOfDay } from "date-fns";
+import { safeFormat, tryParseDate } from "@/utils/dateHelpers";
 import {
   ArrowRight,
   CalendarDays,
@@ -61,15 +62,19 @@ export default function Today() {
     },
   });
 
-  const todaysEvents = data?.events.filter((event) => isToday(parseISO(event.start_date))) || [];
+  // Rows with a missing or malformed date are skipped rather than crashing the page.
+  const todaysEvents = data?.events.filter((event) => (() => { const d = tryParseDate(event.start_date); return !!d && isToday(d); })()) || [];
   const nextEvents = todaysEvents.length ? todaysEvents : (data?.events.slice(0, 3) || []);
   const nextConference = data?.conferences[0];
   const conferenceLeadCount = nextConference?.conference_leads?.[0]?.count || 0;
 
   const formatTime = (time: string | null) => {
     if (!time) return "All day";
-    const [hours, minutes] = time.split(":").map(Number);
-    return format(new Date(2026, 0, 1, hours, minutes), "h:mm a");
+    const [hours, minutes = 0] = time.split(":").map(Number);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return time;
+    }
+    return safeFormat(new Date(2026, 0, 1, hours, minutes), "h:mm a", time);
   };
 
   return (
@@ -138,8 +143,8 @@ export default function Today() {
             {nextEvents.length ? nextEvents.map((event, index) => (
               <button key={event.id} onClick={() => navigate("/calendar")} className="group flex w-full items-center gap-4 rounded-2xl border border-transparent p-3 text-left transition-colors hover:border-slate-200 hover:bg-slate-50">
                 <div className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl ${index === 0 ? "bg-[#0b2847] text-white" : "bg-slate-100 text-slate-600"}`}>
-                  <span className="text-[10px] font-semibold uppercase">{format(parseISO(event.start_date), "MMM")}</span>
-                  <span className="text-lg font-bold leading-none">{format(parseISO(event.start_date), "d")}</span>
+                  <span className="text-[10px] font-semibold uppercase">{safeFormat(event.start_date, "MMM")}</span>
+                  <span className="text-lg font-bold leading-none">{safeFormat(event.start_date, "d", "")}</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

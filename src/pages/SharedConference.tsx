@@ -63,6 +63,8 @@ export default function SharedConference() {
       return result;
     },
     enabled: !!token,
+    // An invalid or expired link won't become valid on retry; answer immediately.
+    retry: false,
   });
 
   if (isLoading) {
@@ -233,7 +235,7 @@ export default function SharedConference() {
                     {summary.exec_recommendations.map((rec: string, i: number) => (
                       <li key={i} className="text-sm flex gap-2">
                         <span className="text-primary shrink-0">•</span>
-                        <span>{rec.replace(/^[•\-]\s*/, "")}</span>
+                        <span>{rec.replace(/^[•-]\s*/, "")}</span>
                       </li>
                     ))}
                   </ul>
