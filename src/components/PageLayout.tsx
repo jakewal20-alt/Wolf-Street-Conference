@@ -21,7 +21,7 @@ export function PageLayout({ children, className, maxWidth = "7xl" }: PageLayout
 
   return (
     <div className={cn(
-      "min-h-screen w-full bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6",
+      "min-h-full w-full bg-[#f4f7fb] p-4 sm:p-6 lg:p-8",
       "animate-page-enter"
     )}>
       <div className={cn("mx-auto space-y-6", maxWidthClass, className)}>

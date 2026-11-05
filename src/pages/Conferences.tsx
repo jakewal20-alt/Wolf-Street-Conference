@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Users, Download, ExternalLink, CalendarDays, Trash2, Mail, Loader2, Archive, ArchiveRestore, Pencil, ChevronDown, ChevronRight, Globe, FileText } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Download, ExternalLink, CalendarDays, Trash2, Archive, ArchiveRestore, Pencil, ChevronDown, ChevronRight, Globe, FileText, ArrowRight, Link2, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -30,7 +30,7 @@ import { ImportCalendarEventsDialog } from "@/components/conferences/ImportCalen
 import { IngestFromUrlDialog } from "@/components/conferences/IngestFromUrlDialog";
 import { EditConferenceDialog } from "@/components/conferences/EditConferenceDialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { PageLayout, PageHeader } from "@/components/PageLayout";
+import { PageLayout } from "@/components/PageLayout";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -229,22 +229,22 @@ export default function Conferences() {
     return (
       <Card
         key={conference.id}
-        className={`cursor-pointer transition-all duration-200 border-l-4 ${
+        className={`group cursor-pointer overflow-hidden rounded-2xl border transition-all duration-200 ${
           isSelected
-            ? "ring-2 ring-primary shadow-lg bg-primary/5 border-l-primary"
+            ? "border-cyan-300 ring-2 ring-cyan-100 shadow-lg"
             : status.isPast
-              ? "opacity-60 hover:opacity-80 border-l-muted-foreground/30 hover:shadow-sm"
+              ? "opacity-65 hover:opacity-90 hover:shadow-sm"
               : status.isActive
-                ? "border-l-success shadow-md hover:shadow-lg bg-success/5"
-                : "border-l-primary hover:shadow-md hover:border-l-primary"
+                ? "border-emerald-200 bg-emerald-50/40 shadow-sm hover:shadow-md"
+                : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-md"
         }`}
         onClick={() => setSelectedConferenceId(conference.id)}
       >
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <CardTitle className={`text-base sm:text-lg ${status.isPast ? "text-muted-foreground" : ""}`}>
+                <CardTitle className={`font-display text-lg tracking-tight sm:text-xl ${status.isPast ? "text-muted-foreground" : "text-slate-950"}`}>
                   {conference.name}
                 </CardTitle>
                 {conference.is_shared && conference.owner_name && (
@@ -270,7 +270,7 @@ export default function Conferences() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <Badge className={`text-xs ${status.className}`}>{status.label}</Badge>
+              <Badge className={`rounded-full border-0 px-2.5 text-[10px] font-semibold uppercase tracking-wide ${status.className}`}>{status.label}</Badge>
               <Button variant="ghost" size="icon" className="h-8 w-8"
                 onClick={(e) => { e.stopPropagation(); navigate('/calendar'); }}
                 title="View in Calendar"
@@ -313,7 +313,7 @@ export default function Conferences() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 sm:px-6 sm:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="w-4 h-4" />
@@ -335,55 +335,33 @@ export default function Conferences() {
 
   return (
     <PageLayout>
-      <PageHeader
-        title="Conferences"
-        description="Track conferences, capture leads, and convert them to opportunities"
-        icon={<Calendar className="w-6 h-6" />}
-      />
-
-      <Card className="border-2 border-dashed">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <Button
-                variant="outline"
-                className="w-full justify-start text-muted-foreground"
-                onClick={() => setShowIngestDialog(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Paste conference website URL (e.g., I/ITSEC, AFCEA, AFA)...
-              </Button>
-            </div>
-            <Button onClick={() => setShowIngestDialog(true)}>
-              Build from URL
-            </Button>
+      <section className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white px-6 py-7 shadow-sm sm:px-8 sm:py-9">
+        <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-cyan-100 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+          <div>
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700"><CalendarDays className="h-4 w-4" /> Field intelligence</div>
+            <h1 className="font-display text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">Conferences</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">Prepare the room, capture every meaningful conversation, and leave with clear owners and next moves.</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setShowImportDialog(true)}><Download className="mr-2 h-4 w-4" /> Import calendar</Button>
+            <Button className="bg-[#0b2847] hover:bg-[#10395f]" onClick={() => setShowAddDialog(true)}><Plus className="mr-2 h-4 w-4" /> Add conference</Button>
+          </div>
+        </div>
+      </section>
+
+      <button onClick={() => setShowIngestDialog(true)} className="group flex w-full items-center gap-4 rounded-2xl border border-dashed border-cyan-300 bg-cyan-50/60 p-4 text-left transition-colors hover:border-cyan-400 hover:bg-cyan-50 sm:p-5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-cyan-700 shadow-sm"><Link2 className="h-5 w-5" /></div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2"><p className="text-sm font-semibold text-slate-900">Build a conference workspace from its website</p><Sparkles className="h-4 w-4 text-cyan-600" /></div>
+          <p className="mt-1 truncate text-xs text-slate-500">Paste a conference URL and let Wolf Street organize the details.</p>
+        </div>
+        <ArrowRight className="h-4 w-4 text-cyan-700 transition-transform group-hover:translate-x-1" />
+      </button>
 
       {/* Header + Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold">My Conferences</h2>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowImportDialog(true)}
-            className="flex-1 sm:flex-none"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Import from Calendar</span>
-            <span className="sm:hidden">Import</span>
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setShowAddDialog(true)}
-            className="flex-1 sm:flex-none"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Conference
-          </Button>
-        </div>
+        <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace</p><h2 className="mt-1 font-display text-2xl font-semibold tracking-tight text-slate-950">Your conference rhythm</h2></div>
       </div>
 
       {isLoading ? (

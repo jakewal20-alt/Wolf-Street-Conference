@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticate, requireConferenceAccess, tooLarge } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,9 +13,15 @@ serve(async (req) => {
   }
 
   try {
+    const auth = await authenticate(req, corsHeaders);
+    if (auth instanceof Response) return auth;
     const { conferenceId, feedback, currentSummary } = await req.json();
+    const denied = await requireConferenceAccess(auth, conferenceId, corsHeaders);
+    if (denied) return denied;
+    const oversized = tooLarge(feedback, 20000, corsHeaders)
+      ?? tooLarge(JSON.stringify(currentSummary ?? ""), 200000, corsHeaders);
+    if (oversized) return oversized;
     console.log(`[refine-conference-summary] Processing feedback for conference: ${conferenceId}`);
-    console.log(`[refine-conference-summary] Feedback: ${feedback}`);
 
     if (!conferenceId || !feedback || !currentSummary) {
       return new Response(

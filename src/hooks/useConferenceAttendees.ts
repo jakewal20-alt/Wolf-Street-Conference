@@ -145,7 +145,7 @@ export function useConferenceAttendees(conferenceId?: string) {
       const { error } = await supabase.functions.invoke("send-calendar-invite", {
         body: {
           event_id: conference.calendar_event_id,
-          test_email: profile.email,
+          recipient_user_id: userId,
         },
       });
       if (error) throw error;
@@ -155,8 +155,7 @@ export function useConferenceAttendees(conferenceId?: string) {
       const { error } = await supabase.functions.invoke("send-conference-attendance-invite", {
         body: {
           conference_id: conferenceId,
-          recipient_email: profile.email,
-          recipient_name: profile.full_name,
+          recipient_user_id: userId,
         },
       });
       if (error) throw error;

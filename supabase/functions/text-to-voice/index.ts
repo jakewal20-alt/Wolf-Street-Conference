@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { authenticate, tooLarge } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +12,11 @@ serve(async (req) => {
   }
 
   try {
+    const auth = await authenticate(req, corsHeaders);
+    if (auth instanceof Response) return auth;
     const { text, voice } = await req.json();
+    const oversized = tooLarge(text, 4096, corsHeaders);
+    if (oversized) return oversized;
 
     if (!text) {
       throw new Error('Text is required');

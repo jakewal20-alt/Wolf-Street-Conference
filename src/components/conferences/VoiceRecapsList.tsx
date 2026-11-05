@@ -6,6 +6,8 @@ import { Mic, Clock, User, ChevronDown, ChevronUp, Play, Pause } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { useState, useRef } from "react";
 import { safeDate } from "@/utils/dateHelpers";
+import { getSignedFileUrl } from "@/lib/storage";
+import { toast } from "sonner";
 
 interface VoiceRecapsListProps {
   conferenceId: string;
@@ -42,8 +44,8 @@ export function VoiceRecapsList({ conferenceId, readOnly = false }: VoiceRecapsL
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const togglePlay = (recapId: string, audioUrl: string | null) => {
-    if (!audioUrl) return;
+  const togglePlay = async (recapId: string, storedAudio: string | null) => {
+    if (!storedAudio) return;
 
     if (playingId === recapId) {
       audioRef.current?.pause();
@@ -53,6 +55,17 @@ export function VoiceRecapsList({ conferenceId, readOnly = false }: VoiceRecapsL
 
     if (audioRef.current) {
       audioRef.current.pause();
+    }
+
+    let audioUrl: string | null = null;
+    try {
+      audioUrl = await getSignedFileUrl(storedAudio);
+    } catch (error) {
+      console.error("Could not load recording:", error);
+    }
+    if (!audioUrl) {
+      toast.error("Recording is unavailable");
+      return;
     }
 
     const audio = new Audio(audioUrl);

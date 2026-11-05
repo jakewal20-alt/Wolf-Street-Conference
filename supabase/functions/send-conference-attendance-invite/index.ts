@@ -1,5 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.86.0';
 import { Resend } from 'https://esm.sh/resend@4.0.0';
+import { authenticate, requireConferenceAccess, escapeHtml } from '../_shared/auth.ts';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
 const FROM_EMAIL = Deno.env.get('EMAIL_FROM_ADDRESS') || 'Wolf Street <calendar@resend.dev>';
@@ -67,11 +67,29 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { conference_id, recipient_email, recipient_name } = await req.json();
+    const auth = await authenticate(req, corsHeaders);
+    if (auth instanceof Response) return auth;
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { conference_id, recipient_user_id } = await req.json();
+    const denied = await requireConferenceAccess(auth, conference_id, corsHeaders);
+    if (denied) return denied;
+
+    const supabase = auth.admin;
+
+    // Invites only go to registered users, never to arbitrary addresses.
+    const { data: recipient } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', recipient_user_id)
+      .maybeSingle();
+    if (!recipient?.email) {
+      return new Response(
+        JSON.stringify({ error: 'Recipient not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const recipient_email = recipient.email;
+    const recipient_name = recipient.full_name;
 
     // Fetch conference
     const { data: conference, error: confError } = await supabase
@@ -82,7 +100,7 @@ Deno.serve(async (req) => {
 
     if (confError || !conference) {
       return new Response(
-        JSON.stringify({ error: 'Conference not found', details: confError }),
+        JSON.stringify({ error: 'Conference not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -110,7 +128,7 @@ Deno.serve(async (req) => {
     };
     const dateStr = `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}`;
 
-    const greeting = recipient_name ? `Hi ${recipient_name},` : 'Hi,';
+    const greeting = recipient_name ? `Hi ${escapeHtml(recipient_name)},` : 'Hi,';
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -123,10 +141,10 @@ Deno.serve(async (req) => {
             <p style="color: #4a5568; font-size: 16px;">You've been tagged as attending the following conference:</p>
 
             <div style="background-color: #f8f9fa; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 0 4px 4px 0;">
-              <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 10px 0;">${conference.name}</h2>
+              <h2 style="color: #1a1a1a; font-size: 20px; margin: 0 0 10px 0;">${escapeHtml(conference.name)}</h2>
               <p style="color: #4a5568; margin: 5px 0;"><strong>When:</strong> ${dateStr}</p>
-              ${conference.location ? `<p style="color: #4a5568; margin: 5px 0;"><strong>Where:</strong> ${conference.location}</p>` : ''}
-              ${conference.description ? `<p style="color: #4a5568; margin: 10px 0 0 0;">${conference.description}</p>` : ''}
+              ${conference.location ? `<p style="color: #4a5568; margin: 5px 0;"><strong>Where:</strong> ${escapeHtml(conference.location)}</p>` : ''}
+              ${conference.description ? `<p style="color: #4a5568; margin: 10px 0 0 0;">${escapeHtml(conference.description)}</p>` : ''}
             </div>
 
             <p style="color: #4a5568; font-size: 14px;">

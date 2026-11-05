@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPersonaPromptPrefix } from "../_shared/bd-persona.ts";
+import { authenticate, requireConferenceAccess, tooLarge } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,8 @@ serve(async (req) => {
   }
 
   try {
+    const auth = await authenticate(req, corsHeaders);
+    if (auth instanceof Response) return auth;
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       throw new Error("No authorization header");
@@ -41,6 +44,10 @@ serve(async (req) => {
     }
 
     const { conference_id, notes } = await req.json();
+    const denied = await requireConferenceAccess(auth, conference_id, corsHeaders);
+    if (denied) return denied;
+    const oversized = tooLarge(notes, 100000, corsHeaders);
+    if (oversized) return oversized;
 
     if (!conference_id || !notes) {
       throw new Error("conference_id and notes are required");

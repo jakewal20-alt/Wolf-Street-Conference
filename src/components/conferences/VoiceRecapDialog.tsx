@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadUserFile } from "@/lib/storage";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Mic, Square, Loader2, Save, Sparkles } from "lucide-react";
@@ -139,7 +140,6 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
       // Upload audio to storage if available
       let audioUrl: string | null = null;
       if (audioBase64) {
-        const fileName = `${user.id}/${Date.now()}_voice_recap.webm`;
         const byteCharacters = atob(audioBase64);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -148,15 +148,10 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: "audio/webm" });
 
-        const { error: uploadError } = await supabase.storage
-          .from("meeting-transcripts")
-          .upload(fileName, blob);
-
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage
-            .from("meeting-transcripts")
-            .getPublicUrl(fileName);
-          audioUrl = urlData.publicUrl;
+        try {
+          audioUrl = await uploadUserFile(user.id, "voice_recap.webm", blob);
+        } catch (uploadError) {
+          console.error("Audio upload error:", uploadError);
         }
       }
 

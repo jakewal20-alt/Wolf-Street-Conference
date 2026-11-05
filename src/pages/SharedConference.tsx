@@ -7,51 +7,60 @@ import { Loader2, MapPin, Calendar, Users, Mic, FileText } from "lucide-react";
 import { safeDate } from "@/utils/dateHelpers";
 import { VoiceRecapsList } from "@/components/conferences/VoiceRecapsList";
 
+interface SharedLead {
+  id: string;
+  contact_name: string;
+  company: string | null;
+  title: string | null;
+  notes: string | null;
+  status: string;
+}
+
+interface SharedRecap {
+  id: string;
+  created_at: string;
+  ai_summary: string | null;
+  transcript: string | null;
+  recorded_by_name: string | null;
+  lead_contact_name: string | null;
+}
+
+interface SharedSummary {
+  headline?: string;
+  conference_overview?: string;
+  exec_recommendations?: string[];
+}
+
+interface SharedConferencePayload {
+  conference: {
+    id: string;
+    name: string;
+    location: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    description: string | null;
+    tags: string[] | null;
+    exec_summary: SharedSummary | null;
+  };
+  leads: SharedLead[];
+  recaps: SharedRecap[];
+}
+
 export default function SharedConference() {
   const { token } = useParams<{ token: string }>();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["shared-conference", token],
     queryFn: async () => {
-      if (!token) throw new Error("No share token");
+      if (!token) throw new Error("No share link");
 
-      // Look up the share link
-      const { data: shareLink, error: linkError } = await supabase
-        .from("conference_share_links")
-        .select("*, conferences(*)")
-        .eq("token", token)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (linkError) throw linkError;
-      if (!shareLink) throw new Error("Invalid or expired share link");
-
-      // Check expiry
-      if (shareLink.expires_at && safeDate(shareLink.expires_at) < new Date()) {
-        throw new Error("This share link has expired");
-      }
-
-      const conference = shareLink.conferences;
-
-      // Fetch leads
-      const { data: leads } = await supabase
-        .from("conference_leads")
-        .select("*")
-        .eq("conference_id", conference.id)
-        .order("created_at", { ascending: false });
-
-      // Fetch voice recaps
-      const { data: recaps } = await supabase
-        .from("conference_voice_recaps")
-        .select(`
-          *,
-          profiles:recorded_by (full_name, email),
-          conference_leads:lead_id (contact_name, company)
-        `)
-        .eq("conference_id", conference.id)
-        .order("created_at", { ascending: false });
-
-      return { conference, leads: leads || [], recaps: recaps || [] };
+      // Token is checked server-side; anonymous visitors have no direct
+      // access to the conference, lead or recap tables.
+      const { data, error } = await supabase.rpc("get_shared_conference", { p_token: token });
+      if (error) throw error;
+      const result = data as unknown as SharedConferencePayload | null;
+      if (!result?.conference) throw new Error("This share link is invalid or has expired.");
+      return result;
     },
     enabled: !!token,
   });
@@ -82,11 +91,11 @@ export default function SharedConference() {
   const { conference, leads, recaps } = data;
 
   const groupedLeads = {
-    new: leads.filter((l: any) => l.status === "new"),
-    contacted: leads.filter((l: any) => l.status === "contacted"),
-    qualified: leads.filter((l: any) => l.status === "qualified"),
-    converted: leads.filter((l: any) => l.status === "converted"),
-    dropped: leads.filter((l: any) => l.status === "dropped"),
+    new: leads.filter((l) => l.status === "new"),
+    contacted: leads.filter((l) => l.status === "contacted"),
+    qualified: leads.filter((l) => l.status === "qualified"),
+    converted: leads.filter((l) => l.status === "converted"),
+    dropped: leads.filter((l) => l.status === "dropped"),
   };
 
   const summary = conference.exec_summary;
@@ -137,14 +146,14 @@ export default function SharedConference() {
               <p className="text-sm text-muted-foreground">No contacts added yet.</p>
             ) : (
               Object.entries(groupedLeads).map(([status, statusLeads]) => {
-                if ((statusLeads as any[]).length === 0) return null;
+                if (statusLeads.length === 0) return null;
                 return (
                   <div key={status}>
                     <h4 className="text-xs font-medium text-muted-foreground uppercase mb-2">
-                      {status} ({(statusLeads as any[]).length})
+                      {status} ({statusLeads.length})
                     </h4>
                     <div className="grid gap-2">
-                      {(statusLeads as any[]).map((lead: any) => (
+                      {statusLeads.map((lead) => (
                         <div key={lead.id} className="p-3 rounded-md bg-muted/30 border">
                           <p className="font-medium text-sm">{lead.contact_name}</p>
                           <p className="text-xs text-muted-foreground">
@@ -174,16 +183,16 @@ export default function SharedConference() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {recaps.map((recap: any) => (
+              {recaps.map((recap) => (
                 <div key={recap.id} className="p-3 rounded-md bg-muted/30 border">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                    <span>{recap.profiles?.full_name || "Unknown"}</span>
+                    <span>{recap.recorded_by_name || "Unknown"}</span>
                     <span>·</span>
                     <span>{safeDate(recap.created_at).toLocaleDateString()}</span>
-                    {recap.conference_leads && (
+                    {recap.lead_contact_name && (
                       <>
                         <span>·</span>
-                        <span>Re: {recap.conference_leads.contact_name}</span>
+                        <span>Re: {recap.lead_contact_name}</span>
                       </>
                     )}
                   </div>
