@@ -3,6 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const STORAGE_KEY = 'outlook_tokens';
+const STATE_KEY = 'outlook_oauth_state';
+
+// NOTE: tokens are kept in localStorage. Before enabling the Microsoft
+// integration in production, move them server-side (encrypted table keyed by
+// user) so an XSS bug can't read them.
 
 interface OutlookTokens {
   accessToken: string;
@@ -38,8 +43,22 @@ export function useOutlookSync() {
     const handleCallback = async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
-      
+      const returnedState = params.get('state');
+
       if (code && window.location.pathname.includes('calendar')) {
+        // Reject callbacks we didn't start (CSRF): state must match what we stored.
+        const expectedState = sessionStorage.getItem(STATE_KEY);
+        sessionStorage.removeItem(STATE_KEY);
+        window.history.replaceState({}, '', window.location.pathname);
+        if (!expectedState || returnedState !== expectedState) {
+          toast({
+            title: "Connection failed",
+            description: "Outlook sign-in could not be verified. Please try connecting again.",
+            variant: "destructive"
+          });
+          return;
+        }
+
         setIsLoading(true);
         try {
           const { data, error } = await supabase.functions.invoke('sync-to-outlook', {
@@ -82,9 +101,11 @@ export function useOutlookSync() {
 
   const connect = useCallback(async () => {
     setIsLoading(true);
+    const oauthState = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+    sessionStorage.setItem(STATE_KEY, oauthState);
     try {
       const { data, error } = await supabase.functions.invoke('sync-to-outlook', {
-        body: { action: 'auth_url' }
+        body: { action: 'auth_url', state: oauthState }
       });
 
       if (error) throw error;

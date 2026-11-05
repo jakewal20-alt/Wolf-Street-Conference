@@ -1,3 +1,4 @@
+import { buildIcs, type IcsEventInput } from "@/lib/ics";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,7 +85,8 @@ const Calendar = () => {
   const toggleWeek = (weekIndex: number) => {
     setExpandedWeeks(prev => {
       const next = new Set(prev);
-      next.has(weekIndex) ? next.delete(weekIndex) : next.add(weekIndex);
+      if (next.has(weekIndex)) next.delete(weekIndex);
+      else next.add(weekIndex);
       return next;
     });
   };
@@ -434,33 +436,8 @@ const Calendar = () => {
   };
 
   const exportToICalendar = () => {
-    const icsEvents = calendarEvents
-      .map(event => {
-        const startDate = parseDateLocal(event.start_date);
-        const formattedStart = safeFormat(startDate, "yyyyMMdd'T'HHmmss'Z'", "");
-        const endDate = event.end_date ? parseDateLocal(event.end_date) : startDate;
-        const formattedEnd = safeFormat(endDate, "yyyyMMdd'T'HHmmss'Z'", "");
-        return [
-          'BEGIN:VEVENT',
-          `UID:${event.id}@calendar.app`,
-          `DTSTAMP:${formattedStart}`,
-          `DTSTART:${formattedStart}`,
-          `DTEND:${formattedEnd}`,
-          `SUMMARY:${event.title}`,
-          `DESCRIPTION:${event.description || ''}`,
-          `LOCATION:${event.location || ''}`,
-          'END:VEVENT'
-        ].join('\\r\\n');
-      });
-
-    const icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Calendar//Calendar Export//EN',
-      'CALSCALE:GREGORIAN',
-      ...icsEvents,
-      'END:VCALENDAR'
-    ].join('\\r\\n');
+    // select("*") also returns start_time / end_time, which the interface omits.
+    const icsContent = buildIcs(calendarEvents as IcsEventInput[]);
 
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');

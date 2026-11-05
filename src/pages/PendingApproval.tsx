@@ -1,17 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, LogOut } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { signOutAndClear } from "@/lib/signOut";
 
 interface PendingApprovalProps {
   email: string;
 }
 
 export default function PendingApproval({ email }: PendingApprovalProps) {
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/auth";
-  };
+  const handleSignOut = signOutAndClear;
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">

@@ -4,10 +4,22 @@ import { toast } from "sonner";
 import { subDays, addDays } from "date-fns";
 import { parseDateLocal, safeFormat } from "@/utils/dateHelpers";
 
+// Conference ids with a calendar-event creation in flight. A double click (or
+// two dialogs) reuses the same promise instead of inserting a second event.
+const inFlightCreates = new Map<string, Promise<string>>();
+
 export function useConferenceCalendarSync() {
   const queryClient = useQueryClient();
 
-  const createCalendarEventForConference = async (conference: {
+  // Everything that shows conferences or calendar events, so no screen keeps
+  // stale data after a sync.
+  const invalidateConferenceCalendar = () => {
+    for (const key of ["conferences", "calendar-events", "conference-linked-event-ids", "today-command-center"]) {
+      queryClient.invalidateQueries({ queryKey: [key] });
+    }
+  };
+
+  const createCalendarEventForConferenceOnce = async (conference: {
     id: string;
     name: string;
     start_date: string;
@@ -40,7 +52,7 @@ export function useConferenceCalendarSync() {
       // Calculate calendar dates including travel days
       let calendarStartDate = conference.start_date;
       let calendarEndDate = conference.end_date;
-      let title = conference.name;
+      const title = conference.name;
       let description = conference.description || "";
 
       if (travelDays && (travelDays.before > 0 || travelDays.after > 0)) {
@@ -68,7 +80,7 @@ export function useConferenceCalendarSync() {
       }
 
       // If the calendar event already exists (same user + same dates + same title), reuse it.
-      const { data: existingEvent, error: existingEventError } = await supabase
+      const { data: existingEvents, error: existingEventError } = await supabase
         .from("calendar_events")
         .select("id")
         .eq("user_id", user.id)
@@ -76,10 +88,13 @@ export function useConferenceCalendarSync() {
         .eq("title", title)
         .eq("start_date", calendarStartDate)
         .eq("end_date", calendarEndDate)
-        .maybeSingle();
+        .order("created_at", { ascending: true })
+        .limit(1);
 
       if (existingEventError) throw existingEventError;
 
+      // Older double-clicks may have left duplicates; reuse the oldest one.
+      const existingEvent = existingEvents?.[0];
       if (existingEvent?.id) {
         const { error: linkError } = await supabase
           .from("conferences")
@@ -91,8 +106,7 @@ export function useConferenceCalendarSync() {
 
         if (linkError) throw linkError;
 
-        queryClient.invalidateQueries({ queryKey: ["conferences"] });
-        queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+        invalidateConferenceCalendar();
 
         return existingEvent.id;
       }
@@ -131,14 +145,26 @@ export function useConferenceCalendarSync() {
 
       if (linkError) throw linkError;
 
-      queryClient.invalidateQueries({ queryKey: ["conferences"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      invalidateConferenceCalendar();
 
       return calendarEvent.id;
     } catch (error) {
       console.error("Error creating calendar event:", error);
       throw error;
     }
+  };
+
+  const createCalendarEventForConference = (
+    ...args: Parameters<typeof createCalendarEventForConferenceOnce>
+  ): Promise<string> => {
+    const conferenceId = args[0].id;
+    const pending = inFlightCreates.get(conferenceId);
+    if (pending) return pending;
+    const promise = createCalendarEventForConferenceOnce(...args).finally(() => {
+      inFlightCreates.delete(conferenceId);
+    });
+    inFlightCreates.set(conferenceId, promise);
+    return promise;
   };
 
   const updateCalendarEventWithTravelDays = async (
@@ -203,8 +229,7 @@ export function useConferenceCalendarSync() {
 
       if (error) throw error;
 
-      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
-      queryClient.invalidateQueries({ queryKey: ["conferences"] });
+      invalidateConferenceCalendar();
     } catch (error) {
       console.error("Error updating calendar event with travel days:", error);
       throw error;
@@ -235,7 +260,7 @@ export function useConferenceCalendarSync() {
 
       if (error) throw error;
 
-      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      invalidateConferenceCalendar();
     } catch (error) {
       console.error("Error updating calendar event:", error);
       throw error;
@@ -264,7 +289,7 @@ export function useConferenceCalendarSync() {
 
       if (error) throw error;
 
-      queryClient.invalidateQueries({ queryKey: ["conferences"] });
+      invalidateConferenceCalendar();
     } catch (error) {
       console.error("Error updating conference:", error);
       throw error;
@@ -286,7 +311,7 @@ export function useConferenceCalendarSync() {
 
       if (error) throw error;
 
-      queryClient.invalidateQueries({ queryKey: ["conferences"] });
+      invalidateConferenceCalendar();
     } catch (error) {
       console.error("Error linking calendar event:", error);
       throw error;

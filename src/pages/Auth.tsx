@@ -37,6 +37,15 @@ export default function Auth() {
     }
   }, [location]);
 
+  // Already signed in? Skip the login screen (but not the password-reset form,
+  // which runs inside the temporary recovery session).
+  useEffect(() => {
+    if (location.pathname === "/reset-password") return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) navigate("/", { replace: true });
+    });
+  }, [location.pathname, navigate]);
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -55,14 +64,20 @@ export default function Auth() {
 
       if (error) throw error;
 
-      toast({
-        title: "Account created!",
-        description: "You can now sign in with your credentials.",
-      });
-
-      // Auto sign in after signup
-      if (data.user) {
+      if (data.session) {
+        // Email confirmation is off: the user is signed in already. New
+        // accounts still need an admin's approval (ProtectedRoute shows that).
+        toast({
+          title: "Account created",
+          description: "An admin needs to approve your account before you can use Wolf Street.",
+        });
         navigate("/");
+      } else {
+        // Email confirmation is on: there is no session until they click the link.
+        toast({
+          title: "Check your email",
+          description: `We sent a confirmation link to ${email}. After confirming, an admin will approve your account.`,
+        });
       }
     } catch (error: any) {
       toast({
@@ -135,6 +150,11 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("This reset link has expired or was already used. Request a new one from the sign-in page.");
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
