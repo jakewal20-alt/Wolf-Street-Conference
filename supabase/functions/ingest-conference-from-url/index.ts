@@ -7,6 +7,63 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+
+type ExtractedSpeaker = {
+  name?: unknown;
+  title?: unknown;
+  organization?: unknown;
+  session_title?: unknown;
+  session_time?: unknown;
+};
+
+const clean = (v: unknown, max: number): string | null => {
+  if (typeof v !== "string") return null;
+  const t = v.replace(/\s+/g, " ").trim();
+  return t ? t.slice(0, max) : null;
+};
+
+// deno-lint-ignore no-explicit-any
+async function saveImportedSpeakers(supabase: any, conferenceId: string, sourceUrl: string, raw: unknown): Promise<number> {
+  const list = Array.isArray(raw) ? (raw as ExtractedSpeaker[]) : [];
+  const seen = new Set<string>();
+  const rows = [];
+  for (const sp of list.slice(0, 300)) {
+    const name = clean(sp?.name, 200);
+    if (!name) continue;
+    const key = `${name.toLowerCase()}|${(clean(sp?.session_title, 300) ?? "").toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      conference_id: conferenceId,
+      name,
+      title: clean(sp?.title, 200),
+      organization: clean(sp?.organization, 200),
+      session_title: clean(sp?.session_title, 300),
+      session_time: clean(sp?.session_time, 100),
+      source_url: sourceUrl,
+      extracted_at: new Date().toISOString(),
+    });
+  }
+
+  const { error: deleteError } = await supabase
+    .from("conference_speakers")
+    .delete()
+    .eq("conference_id", conferenceId)
+    .eq("source_url", sourceUrl);
+  if (deleteError) {
+    // Most likely the table doesn't exist yet; never fail the import over speakers.
+    console.error("Speaker cleanup failed:", deleteError.message);
+    return 0;
+  }
+  if (!rows.length) return 0;
+  const { error: insertError } = await supabase.from("conference_speakers").insert(rows);
+  if (insertError) {
+    console.error("Speaker insert failed:", insertError.message);
+    return 0;
+  }
+  return rows.length;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -224,6 +281,11 @@ EXTRACTION REQUIREMENTS:
 
 7. **Registration URL**: If a separate registration link is visible
 
+8. **Speakers**: Every named speaker, keynote, panelist or moderator shown on the page.
+   - Only people actually named in the HTML. Never invent or infer names.
+   - For each: name, job title, organization, the session they appear in, and the session date/time as written.
+   - Leave unknown fields empty. Return an empty list if no speakers are named.
+
 Example good description:
 "I/ITSEC is the world's largest modeling, simulation, and training conference, attracting over 16,000 attendees annually. Hosted in Orlando, FL, the event brings together defense, government, and industry professionals to explore cutting-edge training technologies, virtual reality solutions, and simulation systems. The conference features 500+ exhibitors, technical paper presentations, tutorials, and extensive networking opportunities for the modeling and simulation community."`;
 
@@ -264,7 +326,23 @@ Example good description:
                     venue: { type: "string", description: "Venue name if available" },
                     short_description: { type: "string", description: "3-5 sentence comprehensive description of the conference, its purpose, attendees, and highlights" },
                     tags: { type: "array", items: { type: "string" }, description: "5-10 relevant topic/industry tags" },
-                    registration_url: { type: "string", description: "Registration URL if available" }
+                    registration_url: { type: "string", description: "Registration URL if available" },
+                    speakers: {
+                      type: "array",
+                      description: "Named speakers, keynotes, panelists and moderators shown on the page. Empty if none are named.",
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string" },
+                          title: { type: "string", description: "Job title" },
+                          organization: { type: "string" },
+                          session_title: { type: "string" },
+                          session_time: { type: "string", description: "Date/time as written on the page" }
+                        },
+                        required: ["name"],
+                        additionalProperties: false
+                      }
+                    }
                   },
                   required: ["name", "start_date", "end_date", "location", "short_description", "tags"],
                   additionalProperties: false
@@ -371,6 +449,7 @@ Example good description:
       source_url: url,
       website_data: {
         ...parsedData,
+        speakers: undefined, // stored in conference_speakers
         ingested_at: new Date().toISOString(),
       },
       created_by: user.id,
@@ -420,6 +499,11 @@ Example good description:
       conferenceId = newConf.id;
       console.log("Successfully created conference:", conferenceId);
     }
+
+    // Save speakers. Rows previously imported from this URL are replaced;
+    // speakers added by hand (source_url NULL) or from other pages are kept.
+    const speakerCount = await saveImportedSpeakers(supabase, conferenceId, url, parsedData.speakers);
+    console.log("Saved speakers:", speakerCount);
 
     // Create or update the linked calendar event (prevents duplicates)
     const calendarEventPayload = {
@@ -514,6 +598,7 @@ Example good description:
           tags: parsedData.tags || [],
           venue: parsedData.venue,
           registration_url: parsedData.registration_url,
+          speaker_count: speakerCount,
         },
         raw: parsedData,
       }),
