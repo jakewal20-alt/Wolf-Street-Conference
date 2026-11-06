@@ -35,6 +35,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConferenceAttendeeBadges } from "@/components/conferences/ConferenceAttendees";
+import { ConferenceSpeakers } from "@/components/conferences/ConferenceSpeakers";
 
 export default function Conferences() {
   const navigate = useNavigate();
@@ -462,6 +463,8 @@ export default function Conferences() {
                       </div>
                     </div>
                   )}
+
+                  <ConferenceSpeakers conferenceId={selectedConference.id} />
 
                   {/* Quick info row */}
                   <div className="flex flex-wrap items-center gap-2 mt-3">

@@ -874,6 +874,59 @@ export type Database = {
           },
         ]
       }
+      conference_speakers: {
+        Row: {
+          conference_id: string
+          created_at: string
+          created_by: string | null
+          extracted_at: string | null
+          id: string
+          name: string
+          organization: string | null
+          session_time: string | null
+          session_title: string | null
+          source_url: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          conference_id: string
+          created_at?: string
+          created_by?: string | null
+          extracted_at?: string | null
+          id?: string
+          name: string
+          organization?: string | null
+          session_time?: string | null
+          session_title?: string | null
+          source_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conference_id?: string
+          created_at?: string
+          created_by?: string | null
+          extracted_at?: string | null
+          id?: string
+          name?: string
+          organization?: string | null
+          session_time?: string | null
+          session_title?: string | null
+          source_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conference_speakers_conference_id_fkey"
+            columns: ["conference_id"]
+            isOneToOne: false
+            referencedRelation: "conferences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conference_share_links: {
         Row: {
           id: string
