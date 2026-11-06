@@ -1,3 +1,5 @@
+> *Gemini 3.1 Pro output, Nov 5, 2026, kept verbatim. Since then, "Wolf Street" has become the name of the suite, and the app reviewed here is called **Hallway**. See `docs/HALLWAY_OVERVIEW.md` for the reviewed recommendations.*
+
 Here is a concrete design strategy to align Wolf Street with the SAMKLR suite while optimizing it for its specific field-intelligence use case. 
 
 ### 1. Assessment of Wolf Street's Current Design

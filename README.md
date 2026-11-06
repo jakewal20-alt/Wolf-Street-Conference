@@ -1,73 +1,47 @@
-# Welcome to your Lovable project
+# Hallway
 
-## Project info
+**Conference and relationship intelligence. Part of the Wolf Street BD suite.**
 
-**URL**: https://lovable.dev/projects/adf8c17a-ac0d-4a20-abca-e77d1fb94773
+Hallway answers *where will the people be, and how do we work the room?* It covers conferences and events, the team calendar, leads captured at events (business-card scan, voice recaps), contacts and touchpoints, AI executive summaries, and share links.
 
-## How can I edit this code?
+Other apps in the Wolf Street suite:
+- **SAMklr**: posted federal opportunities, scoring, and pursue decisions.
+- **Forecast**: where DoD money is going, and the people behind the programs.
 
-There are several ways of editing your application.
+Hallway doesn't do budget forecasting or opportunity scoring; it takes those from Forecast and SAMklr.
 
-**Use Lovable**
+- Live: https://bacnswolfstreet.com
+- Overview, architecture and design decisions: [`docs/HALLWAY_OVERVIEW.md`](docs/HALLWAY_OVERVIEW.md)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/adf8c17a-ac0d-4a20-abca-e77d1fb94773) and start prompting.
+> The repository and the Supabase project are still named "Wolf-Street-Conference" from before the rename.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Stack
 
-**Use your preferred IDE**
+- React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui, TanStack Query
+- Supabase project `idsuahhfpkxylfmuidto`: Postgres with row-level security, Auth, Storage (private `meeting-transcripts` bucket), and Edge Functions (Deno)
+- AI: OpenAI, called from edge functions only. Email: Resend.
+- Hosting: Railway (Dockerfile). Merging to `main` deploys.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm install
+npm run dev          # http://localhost:8080 (uses the live Supabase project)
+npx tsc --noEmit -p tsconfig.app.json
+npm run lint
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+`.env` holds only the public Supabase URL and publishable key. Server secrets (OpenAI, Resend, service role) live in Supabase function secrets.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Database changes
 
-**Use GitHub Codespaces**
+Migrations live in `supabase/migrations/`. Production was originally built from `supabase/clean_schema.sql`, so apply new migrations by pasting them into the Supabase SQL Editor. Run the whole file with nothing highlighted. Every migration is written to be safe to run more than once.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Edge functions
 
-## What technologies are used for this project?
+```sh
+supabase functions deploy <name> --project-ref idsuahhfpkxylfmuidto
+```
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/adf8c17a-ac0d-4a20-abca-e77d1fb94773) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Every function that uses the service role must call `authenticate()` from `supabase/functions/_shared/auth.ts`, and check access to any record it touches. Fetch user-supplied URLs only through `_shared/safe-fetch.ts`.

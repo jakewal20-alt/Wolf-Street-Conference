@@ -249,7 +249,7 @@ export function ShareConferenceDialog({
             ) : availableUsers.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">
                 {users?.length === 0
-                  ? "No other users in Wolf Street yet"
+                  ? "No other users in Hallway yet"
                   : "All users already have access"}
               </p>
             ) : (

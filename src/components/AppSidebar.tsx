@@ -63,13 +63,13 @@ export function AppSidebar() {
             <div className="flex w-full items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1"><img src="/branding/intel-hero-wolfstreet.png" alt="" className="h-full w-full rounded-lg" /></div>
               <div>
-                <h1 className="font-display text-lg font-semibold tracking-tight text-sidebar-accent-foreground">Wolf Street</h1>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-primary">BD intelligence</p>
+                <h1 className="font-display text-lg font-semibold tracking-tight text-sidebar-accent-foreground">Hallway</h1>
+                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-primary">A Wolf Street app</p>
               </div>
             </div>
           )}
           {isCollapsed && (
-            <img src="/branding/intel-hero-wolfstreet.png" alt="Wolf Street" className="h-9 w-9 rounded-lg" />
+            <img src="/branding/intel-hero-wolfstreet.png" alt="Hallway" className="h-9 w-9 rounded-lg" />
           )}
         </div>
 

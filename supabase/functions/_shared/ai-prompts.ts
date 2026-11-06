@@ -98,7 +98,7 @@ export const DAILY_BRIEF_PROMPT = (opportunities: DailyBriefOpportunity[]): stri
     MONITOR: opportunities.filter(o => o.ai_bucket === 'MONITOR' || o.ai_bucket === 'INFO_ONLY'),
   };
 
-  return `You are the Accelint AI core generating a daily intelligence brief for the Wolf Street BD platform.
+  return `You are the Accelint AI core generating a daily intelligence brief for Hallway, part of the Wolf Street BD suite.
 
 ACCELINT MISSION: Accelerate readiness for the DoD through AI-driven training, decision support, and autonomy for warfighters.
 

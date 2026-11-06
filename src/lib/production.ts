@@ -1,5 +1,5 @@
 /**
- * Production utilities for Wolf Street
+ * Production utilities for Hallway
  * Ensures clean, optimized behavior in production environment
  */
 
