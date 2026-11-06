@@ -454,10 +454,10 @@ const Calendar = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
-      <div className="max-w-7xl mx-auto flex gap-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6 lg:flex-row">
         {/* Mini Calendar Sidebar */}
-        <aside className="w-80 space-y-4">
+        <aside className="w-full space-y-4 lg:w-80 lg:shrink-0">
           {/* Glassmorphism Mini Calendar */}
           <Card className="p-5 shadow-xl border backdrop-blur-md bg-card/80 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
@@ -547,7 +547,7 @@ const Calendar = () => {
                         <div className="flex items-center gap-2 mb-1">
                           <EventIcon className="h-3 w-3" style={{ color: eventColor }} />
                           <Badge variant="secondary" className="text-[10px] px-1">{eventLabel}</Badge>
-                          <div className="font-semibold truncate flex-1">{event.title}</div>
+                          <div className="min-w-0 flex-1 truncate font-semibold">{event.title}</div>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="text-muted-foreground flex items-center gap-1">
@@ -576,18 +576,18 @@ const Calendar = () => {
         </aside>
 
         {/* Main Calendar Area */}
-        <div className="flex-1 space-y-6">
+        <div className="min-w-0 flex-1 space-y-6">
           {/* Header */}
           <Card className="p-6 shadow-xl border-2 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h1 className="text-4xl font-display font-bold text-foreground mb-2">Calendar</h1>
+                <h1 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-2">Calendar</h1>
                 <p className="text-muted-foreground flex items-center gap-2">
                   <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
                   Track conferences and events
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-1 border-2 rounded-xl p-1 bg-card shadow-sm">
                   <Button
                     variant={viewMode === "day" ? "default" : "ghost"}

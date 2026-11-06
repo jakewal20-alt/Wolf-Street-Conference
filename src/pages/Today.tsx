@@ -120,7 +120,7 @@ export default function Today() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {[
           { label: "Relationships", value: data?.contactCount || 0, detail: "people in shared intelligence", icon: Users, color: "text-signal", bg: "bg-signal-muted" },
           { label: "Touches today", value: data?.touchesToday || 0, detail: "interactions captured", icon: TrendingUp, color: "text-success", bg: "bg-success/10" },
@@ -139,7 +139,7 @@ export default function Today() {
         ))}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]">
         <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
           <div className="mb-5 flex items-center justify-between">
             <div>
@@ -159,14 +159,14 @@ export default function Today() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-semibold text-foreground">{event.title}</p>
-                    {index === 0 && <Badge className="rounded-xl bg-signal-muted text-signal hover:bg-signal-muted">Next</Badge>}
+                    {index === 0 && <Badge className="shrink-0 rounded-xl bg-signal-muted text-signal hover:bg-signal-muted">Next</Badge>}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{formatTime(event.start_time)}</span>
                     {event.location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{event.location}</span>}
                   </div>
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground/60 transition-transform group-hover:translate-x-1 group-hover:text-signal" />
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-1 group-hover:text-signal" />
               </button>
             )) : (
               <div className="rounded-lg border border-dashed border-border px-5 py-10 text-center">
