@@ -8,7 +8,7 @@ interface PageLayoutProps {
 }
 
 /**
- * Consistent page layout wrapper for all Wolf Street pages
+ * Consistent page layout wrapper for all Hallway pages
  * Provides standardized spacing, max-width, and responsive behavior
  */
 export function PageLayout({ children, className, maxWidth = "7xl" }: PageLayoutProps) {
@@ -39,7 +39,7 @@ interface PageHeaderProps {
 }
 
 /**
- * Consistent page header for all Wolf Street pages
+ * Consistent page header for all Hallway pages
  */
 export function PageHeader({ title, description, action, icon }: PageHeaderProps) {
   return (

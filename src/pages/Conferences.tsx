@@ -353,7 +353,7 @@ export default function Conferences() {
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-signal/20 bg-card text-signal"><Link2 className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2"><p className="text-sm font-semibold text-foreground">Build a conference workspace from its website</p><Sparkles className="h-4 w-4 text-signal" /></div>
-          <p className="mt-1 truncate text-xs text-muted-foreground">Paste a conference URL and let Wolf Street organize the details.</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">Paste a conference URL and let Hallway organize the details.</p>
         </div>
         <ArrowRight className="h-4 w-4 text-signal transition-transform group-hover:translate-x-1" />
       </button>

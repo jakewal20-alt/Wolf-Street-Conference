@@ -63,7 +63,7 @@ export function buildIcs(events: IcsEventInput[], now: Date = new Date()): strin
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//BACNS//Wolf Street//EN",
+    "PRODID:-//Wolf Street//Hallway//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
   ];
@@ -76,6 +76,7 @@ export function buildIcs(events: IcsEventInput[], now: Date = new Date()): strin
     const timed = !event.all_day && startTime !== null;
 
     lines.push("BEGIN:VEVENT");
+    // UID domain must stay stable so re-imports update instead of duplicating.
     lines.push(`UID:${event.id}@bacnswolfstreet.com`);
     lines.push(`DTSTAMP:${utcStamp(now)}`);
 

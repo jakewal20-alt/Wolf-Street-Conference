@@ -5,8 +5,8 @@
 
 @layer base {
   /*
-   * BACNS design tokens — shared with SAMKLR (warm neutrals, navy, 4px
-   * radius, Archivo Narrow / Geist / Geist Mono). Wolf Street's own accent is
+   * Wolf Street suite design tokens — shared with SAMKLR (warm neutrals, navy, 4px
+   * radius, Archivo Narrow / Geist / Geist Mono). Hallway's own accent is
    * "signal" blue; SAMKLR's copper appears only for SAMKLR-linked pursuits.
    * All colors are HSL. shadcn's --accent is a subtle HOVER surface, not the
    * brand color — use bg-signal / text-signal for the brand accent.

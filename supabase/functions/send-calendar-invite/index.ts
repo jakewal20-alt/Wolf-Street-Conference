@@ -2,7 +2,7 @@ import { Resend } from 'https://esm.sh/resend@4.0.0';
 import { authenticate, requireConferenceAccess, escapeHtml } from '../_shared/auth.ts';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
-const FROM_EMAIL = Deno.env.get('EMAIL_FROM_ADDRESS') || 'Wolf Street <calendar@resend.dev>';
+const FROM_EMAIL = Deno.env.get('EMAIL_FROM_ADDRESS') || 'Hallway <calendar@resend.dev>';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -81,7 +81,7 @@ function generateICS(event: CalendarEvent, organizerEmail: string): string {
   const icsContent = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Wolf Street BD Intelligence//EN',
+    'PRODID:-//Wolf Street//Hallway//EN',
     'METHOD:REQUEST',
     'CALSCALE:GREGORIAN',
     'BEGIN:VEVENT',
@@ -268,7 +268,7 @@ Deno.serve(async (req) => {
             </p>
             
             <p style="color: #6b7280; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-              This invite was sent from Wolf Street BD Intelligence Platform.
+              This invite was sent from Hallway, part of the Wolf Street suite.
             </p>
           </div>
         </body>

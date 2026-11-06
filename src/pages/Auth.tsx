@@ -69,7 +69,7 @@ export default function Auth() {
         // accounts still need an admin's approval (ProtectedRoute shows that).
         toast({
           title: "Account created",
-          description: "An admin needs to approve your account before you can use Wolf Street.",
+          description: "An admin needs to approve your account before you can use Hallway.",
         });
         navigate("/");
       } else {
@@ -190,7 +190,7 @@ export default function Auth() {
               </div>
               <CardTitle className="text-2xl">Set a new password</CardTitle>
               <CardDescription>
-                Choose a secure password to get back into Wolf Street.
+                Choose a secure password to get back into Hallway.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -226,11 +226,11 @@ export default function Auth() {
         <section className="relative flex flex-col justify-between px-6 py-8 sm:px-10 lg:px-16 lg:py-12 xl:px-24">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white">
-              <img src="/branding/intel-hero-wolfstreet.png" alt="Wolf Street" className="h-9 w-9 rounded-lg" />
+              <img src="/branding/intel-hero-wolfstreet.png" alt="Hallway" className="h-9 w-9 rounded-lg" />
             </div>
             <div>
-              <p className="font-display text-lg font-semibold tracking-tight">Wolf Street</p>
-              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-sidebar-primary">Conference intelligence</p>
+              <p className="font-display text-lg font-semibold tracking-tight">Hallway</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-sidebar-primary">Conference intelligence · A Wolf Street app</p>
             </div>
           </div>
 
@@ -274,7 +274,7 @@ export default function Auth() {
                 <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-signal-muted text-signal lg:hidden">
                   <img src="/branding/intel-hero-wolfstreet.png" alt="" className="h-9 w-9 rounded-xl" />
                 </div>
-                <CardTitle className="font-display text-2xl tracking-tight sm:text-3xl">Welcome to Wolf Street</CardTitle>
+                <CardTitle className="font-display text-2xl tracking-tight sm:text-3xl">Welcome to Hallway</CardTitle>
                 <CardDescription className="text-sm leading-6 text-muted-foreground">
                   Sign in to continue, or create your team workspace in under a minute.
                 </CardDescription>

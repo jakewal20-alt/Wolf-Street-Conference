@@ -248,7 +248,7 @@ export default function SharedConference() {
         {/* Footer */}
         <div className="text-center py-4">
           <p className="text-xs text-muted-foreground">
-            Powered by Wolf Street Conference
+            Shared from Hallway · Wolf Street
           </p>
         </div>
       </div>

@@ -17,9 +17,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png"],
       manifest: {
-        name: "Wolf Street - Relationship Intelligence",
-        short_name: "Wolf Street",
-        description: "Relationship and activity intelligence for business development teams",
+        name: "Hallway — Wolf Street",
+        short_name: "Hallway",
+        description: "Conference and relationship intelligence for business development teams, part of the Wolf Street suite",
         theme_color: "#1d2b3e",
         background_color: "#fcf9f8",
         display: "standalone",

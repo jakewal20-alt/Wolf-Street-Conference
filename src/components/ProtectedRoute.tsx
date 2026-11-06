@@ -106,7 +106,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         <div className="max-w-sm space-y-4 text-center">
           <h2 className="text-lg font-semibold">We couldn't load your account</h2>
           <p className="text-sm text-muted-foreground">
-            Check your connection and try again. If this keeps happening, contact your Wolf Street admin.
+            Check your connection and try again. If this keeps happening, contact your Hallway admin.
           </p>
           <div className="flex justify-center gap-2">
             <Button onClick={() => { setLoading(true); setApprovalAttempt((n) => n + 1); }}>Try again</Button>

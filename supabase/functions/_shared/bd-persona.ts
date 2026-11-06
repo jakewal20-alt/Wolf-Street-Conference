@@ -1,7 +1,7 @@
 /**
  * Accelint AI Core Context - Single Source of Truth
  * Defines the reasoning, scoring, and recommendation framework for all Lovable AI functions
- * in the Wolf Street / Accelint ecosystem.
+ * in the Hallway app (Wolf Street suite) / Accelint ecosystem.
  */
 
 export interface BDPersona {
@@ -281,7 +281,7 @@ export function scoreToBucket(score: number): OpportunityBucket {
  * Get the Accelint AI Core system prompt
  */
 export function getPersonaPromptPrefix(): string {
-  return `You are the embedded AI core for Accelint and the Wolf Street BD Intelligence platform.
+  return `You are the embedded AI core for Accelint and Hallway, the conference and relationship app in the Wolf Street BD suite.
 Your purpose is to evaluate, score, and recommend actions that accelerate readiness for the DoD and its partners.
 Always align reasoning with Accelint's mission of AI-driven training, decision support, and autonomy for warfighters.
 
