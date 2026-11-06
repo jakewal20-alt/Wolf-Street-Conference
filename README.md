@@ -44,6 +44,10 @@ Hallway's Supabase Auth is the single login for the Wolf Street suite: Forecast 
 
 Public sign-up is off. Admins invite people from **Users** (the `admin-invite-user` function). Invited accounts are approved automatically, and the invite link opens `/reset-password` so the person can choose a password.
 
+## Wolf Street suite bar
+
+The thin bar on top (Forecast · SAMklr · Hallway) is the shared `<wolfstreet-bar>` component from the `wolfstreet` repo, loaded at runtime from `VITE_WOLFSTREET_BAR_URL`. If that's unset, there's no bar. On Railway, set it as a service variable (the Dockerfile passes it to the build) and redeploy. Locally: `VITE_WOLFSTREET_BAR_URL=http://localhost:4400/wolfstreet-bar.js npm run dev`, with `npm start` running in the `wolfstreet` repo.
+
 ## Edge functions
 
 ```sh
