@@ -21,7 +21,7 @@ export function PageLayout({ children, className, maxWidth = "7xl" }: PageLayout
 
   return (
     <div className={cn(
-      "min-h-full w-full bg-[#f4f7fb] p-4 sm:p-6 lg:p-8",
+      "min-h-full w-full bg-background p-4 sm:p-6 lg:p-8",
       "animate-page-enter"
     )}>
       <div className={cn("mx-auto space-y-6", maxWidthClass, className)}>
@@ -51,7 +51,7 @@ export function PageHeader({ title, description, action, icon }: PageHeaderProps
           </div>
         )}
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
             {title}
           </h1>
           {description && (

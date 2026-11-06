@@ -56,15 +56,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar className={isCollapsed ? "w-14 border-r-0" : "w-64 border-r-0"} collapsible="icon">
-      <SidebarContent className="bg-[#071522] text-sidebar-foreground">
+      <SidebarContent className="bg-sidebar text-sidebar-foreground">
         {/* Branding */}
-        <div className="flex items-center justify-center border-b border-white/10 p-5">
+        <div className="flex items-center justify-center border-b border-sidebar-border p-5">
           {!isCollapsed && (
             <div className="flex w-full items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/95 p-1 shadow-lg"><img src="/branding/intel-hero-wolfstreet.png" alt="" className="h-full w-full rounded-lg" /></div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1"><img src="/branding/intel-hero-wolfstreet.png" alt="" className="h-full w-full rounded-lg" /></div>
               <div>
-                <h1 className="font-display text-lg font-semibold tracking-tight text-white">Wolf Street</h1>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-300/80">BD intelligence</p>
+                <h1 className="font-display text-lg font-semibold tracking-tight text-sidebar-accent-foreground">Wolf Street</h1>
+                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-primary">BD intelligence</p>
               </div>
             </div>
           )}
@@ -75,7 +75,7 @@ export function AppSidebar() {
 
         {/* Navigation */}
         <SidebarGroup>
-          {!isCollapsed && <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Workday</SidebarGroupLabel>}
+          {!isCollapsed && <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/60">Workday</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map((item) => {
@@ -88,8 +88,8 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
-                        activeClassName="bg-cyan-300/10 text-cyan-200 font-medium"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                       >
                         <item.icon className="h-5 w-5" />
                         {!isCollapsed && <span>{item.title}</span>}
@@ -103,7 +103,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          {!isCollapsed && <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Workspace</SidebarGroupLabel>}
+          {!isCollapsed && <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/60">Workspace</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {allWorkspaceItems.map((item) => {
@@ -111,7 +111,7 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <NavLink to={item.url} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white" activeClassName="bg-cyan-300/10 text-cyan-200 font-medium">
+                      <NavLink to={item.url} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                         <item.icon className="h-5 w-5" />{!isCollapsed && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
@@ -123,11 +123,11 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Logout */}
-        <div className="mt-auto border-t border-white/10 p-2">
+        <div className="mt-auto border-t border-sidebar-border p-2">
           <SidebarMenuButton asChild>
             <button
               onClick={signOutAndClear}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
               <LogOut className="h-5 w-5" />
               {!isCollapsed && <span>Logout</span>}

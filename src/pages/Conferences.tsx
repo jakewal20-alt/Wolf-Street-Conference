@@ -229,14 +229,14 @@ export default function Conferences() {
     return (
       <Card
         key={conference.id}
-        className={`group cursor-pointer overflow-hidden rounded-2xl border transition-all duration-200 ${
+        className={`group cursor-pointer overflow-hidden rounded-lg border transition-colors duration-200 ${
           isSelected
-            ? "border-cyan-300 ring-2 ring-cyan-100 shadow-lg"
+            ? "border-signal ring-2 ring-signal/20 bg-card"
             : status.isPast
               ? "opacity-65 hover:opacity-90 hover:shadow-sm"
               : status.isActive
-                ? "border-emerald-200 bg-emerald-50/40 shadow-sm hover:shadow-md"
-                : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-md"
+                ? "border-success/40 bg-success/5 hover:border-success/60"
+                : "border-border bg-card hover:border-signal/40"
         }`}
         onClick={() => setSelectedConferenceId(conference.id)}
       >
@@ -244,7 +244,7 @@ export default function Conferences() {
           <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <CardTitle className={`font-display text-lg tracking-tight sm:text-xl ${status.isPast ? "text-muted-foreground" : "text-slate-950"}`}>
+                <CardTitle className={`font-display text-lg tracking-tight sm:text-xl ${status.isPast ? "text-muted-foreground" : "text-foreground"}`}>
                   {conference.name}
                 </CardTitle>
                 {conference.is_shared && conference.owner_name && (
@@ -335,33 +335,32 @@ export default function Conferences() {
 
   return (
     <PageLayout>
-      <section className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white px-6 py-7 shadow-sm sm:px-8 sm:py-9">
-        <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-cyan-100 blur-3xl" />
+      <section className="relative overflow-hidden rounded-lg border border-border bg-card px-6 py-7 sm:px-8 sm:py-9">
         <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
           <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700"><CalendarDays className="h-4 w-4" /> Field intelligence</div>
-            <h1 className="font-display text-3xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-4xl">Conferences</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">Prepare the room, capture every meaningful conversation, and leave with clear owners and next moves.</p>
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-signal"><CalendarDays className="h-4 w-4" /> Field intelligence</div>
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Conferences</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Prepare the room, capture every meaningful conversation, and leave with clear owners and next moves.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setShowImportDialog(true)}><Download className="mr-2 h-4 w-4" /> Import calendar</Button>
-            <Button className="bg-[#0b2847] hover:bg-[#10395f]" onClick={() => setShowAddDialog(true)}><Plus className="mr-2 h-4 w-4" /> Add conference</Button>
+            <Button onClick={() => setShowAddDialog(true)}><Plus className="mr-2 h-4 w-4" /> Add conference</Button>
           </div>
         </div>
       </section>
 
-      <button onClick={() => setShowIngestDialog(true)} className="group flex w-full items-center gap-4 rounded-2xl border border-dashed border-cyan-300 bg-cyan-50/60 p-4 text-left transition-colors hover:border-cyan-400 hover:bg-cyan-50 sm:p-5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-cyan-700 shadow-sm"><Link2 className="h-5 w-5" /></div>
+      <button onClick={() => setShowIngestDialog(true)} className="group flex w-full items-center gap-4 rounded-lg border border-dashed border-signal/40 bg-signal-muted/60 p-4 text-left transition-colors hover:border-signal hover:bg-signal-muted sm:p-5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-signal/20 bg-card text-signal"><Link2 className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2"><p className="text-sm font-semibold text-slate-900">Build a conference workspace from its website</p><Sparkles className="h-4 w-4 text-cyan-600" /></div>
-          <p className="mt-1 truncate text-xs text-slate-500">Paste a conference URL and let Wolf Street organize the details.</p>
+          <div className="flex items-center gap-2"><p className="text-sm font-semibold text-foreground">Build a conference workspace from its website</p><Sparkles className="h-4 w-4 text-signal" /></div>
+          <p className="mt-1 truncate text-xs text-muted-foreground">Paste a conference URL and let Wolf Street organize the details.</p>
         </div>
-        <ArrowRight className="h-4 w-4 text-cyan-700 transition-transform group-hover:translate-x-1" />
+        <ArrowRight className="h-4 w-4 text-signal transition-transform group-hover:translate-x-1" />
       </button>
 
       {/* Header + Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace</p><h2 className="mt-1 font-display text-2xl font-semibold tracking-tight text-slate-950">Your conference rhythm</h2></div>
+        <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Workspace</p><h2 className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground">Your conference rhythm</h2></div>
       </div>
 
       {isLoading ? (
