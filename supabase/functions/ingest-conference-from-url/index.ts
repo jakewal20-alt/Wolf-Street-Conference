@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { authenticate } from "../_shared/auth.ts";
+import { safeFetchText, UnsafeUrlError } from "../_shared/safe-fetch.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,31 +24,12 @@ serve(async (req) => {
       );
     }
 
-    // Get authenticated user first
+    // Get authenticated, approved user first
     console.log("Step 1: Authenticating user...");
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error("No authorization header");
-      return new Response(
-        JSON.stringify({ success: false, error: "Not authenticated" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Extract JWT token from Authorization header
-    const jwt = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
-    if (userError || !user) {
-      console.error("Auth error:", userError);
-      return new Response(
-        JSON.stringify({ success: false, error: "Authentication failed" }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const auth = await authenticate(req, corsHeaders);
+    if (auth instanceof Response) return auth;
+    const user = auth.user;
+    const supabase = auth.admin;
     console.log("User authenticated:", user.id);
 
     // Helper function to derive conference name from URL
@@ -146,14 +128,14 @@ serve(async (req) => {
     let html: string;
     
     try {
-      htmlResponse = await fetch(url, {
+      const fetched = await safeFetchText(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.5',
         },
-        redirect: 'follow',
       });
+      htmlResponse = fetched.response;
 
       if (!htmlResponse.ok) {
         const errorMsg = `HTTP ${htmlResponse.status}: ${htmlResponse.statusText}`;
@@ -167,10 +149,17 @@ serve(async (req) => {
         );
       }
 
-      html = await htmlResponse.text();
+      html = fetched.text;
       console.log("Successfully fetched HTML, length:", html.length);
       
     } catch (fetchError) {
+      // Refuse internal/private URLs outright rather than creating a conference.
+      if (fetchError instanceof UnsafeUrlError) {
+        return new Response(
+          JSON.stringify({ success: false, error: fetchError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
       console.error("Fetch error:", errorMsg);
       console.error("Stack:", fetchError instanceof Error ? fetchError.stack : 'N/A');

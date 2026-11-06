@@ -14,6 +14,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { signOutAndClear } from "@/lib/signOut";
 
 const navigationItems = [
   { title: "Today", url: "/", icon: Sparkles },
@@ -125,10 +126,7 @@ export function AppSidebar() {
         <div className="mt-auto border-t border-white/10 p-2">
           <SidebarMenuButton asChild>
             <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                window.location.href = '/auth';
-              }}
+              onClick={signOutAndClear}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
             >
               <LogOut className="h-5 w-5" />

@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Session } from "@supabase/supabase-js";
 import PendingApproval from "@/pages/PendingApproval";
+import { Button } from "@/components/ui/button";
+import { signOutAndClear } from "@/lib/signOut";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -36,30 +38,51 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Check approval status when session changes
+  const [approvalError, setApprovalError] = useState(false);
+  const [approvalAttempt, setApprovalAttempt] = useState(0);
+
+  // Check approval status when session changes. The profile row is created by
+  // a database trigger right after sign-up, so a brief miss is retried a few
+  // times with backoff; after that we stop and show an error instead of
+  // polling forever.
   useEffect(() => {
     if (!session?.user?.id) return;
+    const userId = session.user.id;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const MAX_ATTEMPTS = 5;
 
-    const checkApproval = async () => {
+    const checkApproval = async (attempt: number) => {
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("is_approved")
-        .eq("id", session.user.id)
-        .single();
+        .eq("id", userId)
+        .maybeSingle();
+      if (cancelled) return;
 
-      if (error) {
-        console.error("Error checking approval:", error);
-        // If profile doesn't exist yet (race condition with trigger), wait and retry
-        setTimeout(checkApproval, 1000);
+      if (error || !profile) {
+        if (error) console.error("Error checking approval:", error);
+        if (attempt + 1 < MAX_ATTEMPTS) {
+          timer = setTimeout(() => checkApproval(attempt + 1), 1000 * 2 ** attempt);
+        } else {
+          setApprovalError(true);
+          setLoading(false);
+        }
         return;
       }
 
-      setIsApproved(profile?.is_approved ?? false);
+      setApprovalError(false);
+      setIsApproved(profile.is_approved ?? false);
       setLoading(false);
     };
 
-    checkApproval();
-  }, [session?.user?.id]);
+    setApprovalError(false);
+    checkApproval(0);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [session?.user?.id, approvalAttempt]);
 
   if (loading) {
     return (
@@ -75,6 +98,23 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!session) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (approvalError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="max-w-sm space-y-4 text-center">
+          <h2 className="text-lg font-semibold">We couldn't load your account</h2>
+          <p className="text-sm text-muted-foreground">
+            Check your connection and try again. If this keeps happening, contact your Wolf Street admin.
+          </p>
+          <div className="flex justify-center gap-2">
+            <Button onClick={() => { setLoading(true); setApprovalAttempt((n) => n + 1); }}>Try again</Button>
+            <Button variant="outline" onClick={signOutAndClear}>Sign out</Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!isApproved) {

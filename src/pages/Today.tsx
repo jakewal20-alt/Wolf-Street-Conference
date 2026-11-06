@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { format, isToday, startOfDay } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { safeFormat, tryParseDate } from "@/utils/dateHelpers";
 import {
   ArrowRight,
@@ -26,10 +26,20 @@ type CalendarEvent = {
   id: string;
   title: string;
   start_date: string;
+  end_date: string | null;
   start_time: string | null;
   location: string | null;
   event_type: string;
 };
+
+/** True if today falls within the event's start..end days (inclusive). */
+function isHappeningToday(event: CalendarEvent): boolean {
+  const start = tryParseDate(event.start_date);
+  if (!start) return false;
+  const end = tryParseDate(event.end_date) ?? start;
+  const today = startOfDay(new Date());
+  return startOfDay(start) <= today && today <= startOfDay(end >= start ? end : start);
+}
 
 export default function Today() {
   const navigate = useNavigate();
@@ -43,7 +53,8 @@ export default function Today() {
       const today = format(new Date(), "yyyy-MM-dd");
       const [profileResult, eventsResult, conferencesResult, contactsResult, touchpointsResult] = await Promise.all([
         supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
-        supabase.from("calendar_events").select("id,title,start_date,start_time,location,event_type").gte("start_date", today).order("start_date").order("start_time").limit(8),
+        // Upcoming events plus multi-day events already in progress (started earlier, end today or later).
+        supabase.from("calendar_events").select("id,title,start_date,end_date,start_time,location,event_type").or(`start_date.gte.${today},end_date.gte.${today}`).order("start_date").order("start_time").limit(8),
         supabase.from("conferences").select("id,name,start_date,end_date,location,conference_leads(count)").eq("archived", false).gte("end_date", today).order("start_date").limit(3),
         supabase.from("contacts").select("id", { count: "exact", head: true }),
         supabase.from("touchpoints").select("id", { count: "exact", head: true }).gte("date", format(startOfDay(new Date()), "yyyy-MM-dd")),
@@ -63,7 +74,7 @@ export default function Today() {
   });
 
   // Rows with a missing or malformed date are skipped rather than crashing the page.
-  const todaysEvents = data?.events.filter((event) => (() => { const d = tryParseDate(event.start_date); return !!d && isToday(d); })()) || [];
+  const todaysEvents = data?.events.filter((event) => isHappeningToday(event)) || [];
   const nextEvents = todaysEvents.length ? todaysEvents : (data?.events.slice(0, 3) || []);
   const nextConference = data?.conferences[0];
   const conferenceLeadCount = nextConference?.conference_leads?.[0]?.count || 0;
