@@ -22,7 +22,6 @@ import {
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -45,50 +44,6 @@ export default function Auth() {
       if (session) navigate("/", { replace: true });
     });
   }, [location.pathname, navigate]);
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.session) {
-        // Email confirmation is off: the user is signed in already. New
-        // accounts still need an admin's approval (ProtectedRoute shows that).
-        toast({
-          title: "Account created",
-          description: "An admin needs to approve your account before you can use Hallway.",
-        });
-        navigate("/");
-      } else {
-        // Email confirmation is on: there is no session until they click the link.
-        toast({
-          title: "Check your email",
-          description: `We sent a confirmation link to ${email}. After confirming, an admin will approve your account.`,
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Sign up failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +107,7 @@ export default function Auth() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error("This reset link has expired or was already used. Request a new one from the sign-in page.");
+        throw new Error("This link has expired or was already used. Use 'Forgot password?' on the sign-in page, or ask your admin for a new invite.");
       }
 
       const { error } = await supabase.auth.updateUser({
@@ -162,8 +117,8 @@ export default function Auth() {
       if (error) throw error;
 
       toast({
-        title: "Password updated!",
-        description: "Your password has been successfully changed.",
+        title: "Password saved",
+        description: "You're signed in.",
       });
 
       navigate("/");
@@ -188,15 +143,15 @@ export default function Auth() {
               <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-signal-muted text-signal">
                 <LockKeyhole className="h-6 w-6" />
               </div>
-              <CardTitle className="text-2xl">Set a new password</CardTitle>
+              <CardTitle className="text-2xl">Choose your password</CardTitle>
               <CardDescription>
-                Choose a secure password to get back into Hallway.
+                Set a password for your Wolf Street account. You'll use it to sign in to Hallway and the other Wolf Street apps.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleUpdatePassword} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
+                  <Label htmlFor="new-password">Password</Label>
                   <Input
                     id="new-password"
                     type="password"
@@ -208,7 +163,7 @@ export default function Auth() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Updating password..." : "Update Password"}
+                  {loading ? "Saving..." : "Save password"}
                 </Button>
               </form>
             </CardContent>
@@ -276,15 +231,14 @@ export default function Auth() {
                 </div>
                 <CardTitle className="font-display text-2xl tracking-tight sm:text-3xl">Welcome to Hallway</CardTitle>
                 <CardDescription className="text-sm leading-6 text-muted-foreground">
-                  Sign in to continue, or create your team workspace in under a minute.
+                  Sign in with the account your team invited you to.
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-6 pb-7 sm:px-9 sm:pb-9">
                 <Tabs defaultValue="signin">
-                  <TabsList className="grid h-11 w-full grid-cols-3 rounded-lg bg-muted p-1">
+                  <TabsList className="grid h-11 w-full grid-cols-2 rounded-lg bg-muted p-1">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                <TabsTrigger value="forgot">Forgot?</TabsTrigger>
+                <TabsTrigger value="forgot">Forgot password?</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
@@ -335,49 +289,11 @@ export default function Auth() {
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="you@company.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="At least 6 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                  <Button type="submit" className="h-11 w-full" disabled={loading}>
-                    {loading ? "Creating account..." : "Create Account"}
-                  </Button>
-                </form>
-              </TabsContent>
                 </Tabs>
-                <div className="mt-6 flex items-center justify-center gap-2 border-t border-border pt-5 text-xs text-muted-foreground">
+                <p className="mt-5 text-center text-xs leading-5 text-muted-foreground">
+                  Hallway is invite-only. Need access? Ask your team's admin to invite you.
+                </p>
+                <div className="mt-5 flex items-center justify-center gap-2 border-t border-border pt-5 text-xs text-muted-foreground">
                   <ShieldCheck className="h-3.5 w-3.5" /> Your data stays inside your secure workspace.
                 </div>
               </CardContent>

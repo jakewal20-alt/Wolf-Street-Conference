@@ -38,6 +38,12 @@ npm run build
 
 Migrations live in `supabase/migrations/`. Production was originally built from `supabase/clean_schema.sql`, so apply new migrations by pasting them into the Supabase SQL Editor. Run the whole file with nothing highlighted. Every migration is written to be safe to run more than once.
 
+## Accounts (invite-only)
+
+Hallway's Supabase Auth is the single login for the Wolf Street suite: Forecast signs people in against this project with the public publishable key. Don't rotate that key, or switch JWT signing keys, without updating Forecast.
+
+Public sign-up is off. Admins invite people from **Users** (the `admin-invite-user` function). Invited accounts are approved automatically, and the invite link opens `/reset-password` so the person can choose a password.
+
 ## Edge functions
 
 ```sh
