@@ -25,7 +25,7 @@ export function ConferenceAttendeeBadges({ conferenceId }: ConferenceAttendeeBad
       <Button
         variant={isCurrentUserAttending ? "default" : "outline"}
         size="sm"
-        className={`h-7 text-xs ${isCurrentUserAttending ? "bg-emerald-600 hover:bg-emerald-700" : ""}`}
+        className={`h-7 text-xs ${isCurrentUserAttending ? "bg-success text-success-foreground hover:bg-success/90" : ""}`}
         onClick={toggleMyAttendance}
         disabled={isToggling}
       >

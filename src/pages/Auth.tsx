@@ -181,11 +181,11 @@ export default function Auth() {
   // If we're on the reset password page, show only the password reset form
   if (showResetPassword) {
     return (
-      <div className="min-h-screen bg-[#07111f] px-4 py-12 text-white sm:px-6">
+      <div className="min-h-screen bg-inverse px-4 py-12 text-inverse-foreground sm:px-6">
         <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-md items-center">
-          <Card className="w-full border-white/10 bg-white text-slate-950 shadow-2xl shadow-black/30">
+          <Card className="w-full border-0 bg-card text-card-foreground">
             <CardHeader>
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-signal-muted text-signal">
                 <LockKeyhole className="h-6 w-6" />
               </div>
               <CardTitle className="text-2xl">Set a new password</CardTitle>
@@ -207,7 +207,7 @@ export default function Auth() {
                     minLength={6}
                   />
                 </div>
-                <Button type="submit" className="w-full bg-[#0b2847] hover:bg-[#0d355f]" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Updating password..." : "Update Password"}
                 </Button>
               </form>
@@ -219,31 +219,30 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#07111f] text-white">
+    <div className="min-h-screen overflow-hidden bg-inverse text-inverse-foreground">
       <div className="relative mx-auto grid min-h-screen max-w-[1600px] lg:grid-cols-[1.12fr_0.88fr]">
         <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(125,211,252,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,.06)_1px,transparent_1px)] [background-size:48px_48px]" />
-        <div className="pointer-events-none absolute -left-32 top-1/3 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl" />
 
         <section className="relative flex flex-col justify-between px-6 py-8 sm:px-10 lg:px-16 lg:py-12 xl:px-24">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/95 shadow-lg">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white">
               <img src="/branding/intel-hero-wolfstreet.png" alt="Wolf Street" className="h-9 w-9 rounded-lg" />
             </div>
             <div>
-              <p className="font-['Space_Grotesk'] text-lg font-semibold tracking-tight">Wolf Street</p>
-              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-cyan-300/80">Conference intelligence</p>
+              <p className="font-display text-lg font-semibold tracking-tight">Wolf Street</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-sidebar-primary">Conference intelligence</p>
             </div>
           </div>
 
           <div className="max-w-2xl py-14 lg:py-20">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold text-cyan-200">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-xl border border-sidebar-primary/30 bg-sidebar-primary/10 px-3 py-1.5 text-xs font-semibold text-sidebar-primary">
               <Sparkles className="h-3.5 w-3.5" />
               Turn every conversation into momentum
             </div>
-            <h1 className="max-w-xl font-['Space_Grotesk'] text-4xl font-semibold leading-[1.05] tracking-[-0.045em] sm:text-5xl xl:text-6xl">
+            <h1 className="max-w-xl font-display text-4xl font-semibold leading-[1.05] tracking-[-0.045em] sm:text-5xl xl:text-6xl">
               Leave the conference with a clear next move.
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-slate-300 sm:text-lg">
+            <p className="mt-6 max-w-xl text-base leading-7 text-inverse-foreground/85 sm:text-lg">
               Capture the people you meet, the conversations that matter, and the follow-ups that win—then turn it all into an executive-ready readout.
             </p>
 
@@ -253,36 +252,36 @@ export default function Auth() {
                 { icon: Mic2, label: "Capture context", detail: "Voice recaps while it's fresh" },
                 { icon: BarChart3, label: "Prove impact", detail: "Team and executive insights" },
               ].map(({ icon: Icon, label, detail }) => (
-                <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 backdrop-blur-sm">
-                  <Icon className="mb-4 h-5 w-5 text-cyan-300" />
-                  <p className="text-sm font-semibold text-white">{label}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p>
+                <div key={label} className="rounded-lg border border-inverse-foreground/15 bg-inverse-foreground/[0.04] p-4">
+                  <Icon className="mb-4 h-5 w-5 text-sidebar-primary" />
+                  <p className="text-sm font-semibold text-inverse-foreground">{label}</p>
+                  <p className="mt-1 text-xs leading-5 text-inverse-muted">{detail}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
-            <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-cyan-400" /> Secure team workspace</span>
-            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-cyan-400" /> Built for conference teams</span>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-inverse-muted">
+            <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-sidebar-primary" /> Secure team workspace</span>
+            <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-sidebar-primary" /> Built for conference teams</span>
           </div>
         </section>
 
         <section className="relative flex items-center px-4 pb-8 sm:px-8 lg:py-8 lg:pr-10 xl:pr-16">
-          <div className="w-full rounded-[28px] border border-white/10 bg-[#f7f9fc] p-2 shadow-2xl shadow-black/40">
-            <Card className="rounded-[22px] border-0 bg-white text-slate-950 shadow-none">
+          <div className="w-full rounded-lg border border-inverse-foreground/15 bg-card p-1">
+            <Card className="rounded-lg border-0 bg-card text-card-foreground shadow-none">
               <CardHeader className="px-6 pb-3 pt-7 sm:px-9 sm:pt-9">
-                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 lg:hidden">
+                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-signal-muted text-signal lg:hidden">
                   <img src="/branding/intel-hero-wolfstreet.png" alt="" className="h-9 w-9 rounded-xl" />
                 </div>
-                <CardTitle className="font-['Space_Grotesk'] text-2xl tracking-tight sm:text-3xl">Welcome to Wolf Street</CardTitle>
-                <CardDescription className="text-sm leading-6 text-slate-500">
+                <CardTitle className="font-display text-2xl tracking-tight sm:text-3xl">Welcome to Wolf Street</CardTitle>
+                <CardDescription className="text-sm leading-6 text-muted-foreground">
                   Sign in to continue, or create your team workspace in under a minute.
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-6 pb-7 sm:px-9 sm:pb-9">
                 <Tabs defaultValue="signin">
-                  <TabsList className="grid h-11 w-full grid-cols-3 rounded-xl bg-slate-100 p-1">
+                  <TabsList className="grid h-11 w-full grid-cols-3 rounded-lg bg-muted p-1">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
                 <TabsTrigger value="forgot">Forgot?</TabsTrigger>
@@ -311,7 +310,7 @@ export default function Auth() {
                       required
                     />
                   </div>
-                  <Button type="submit" className="group h-11 w-full bg-[#0b2847] hover:bg-[#0d355f]" disabled={loading}>
+                  <Button type="submit" className="group h-11 w-full" disabled={loading}>
                     {loading ? "Signing in..." : <span className="flex items-center gap-2">Sign In <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></span>}
                   </Button>
                 </form>
@@ -330,7 +329,7 @@ export default function Auth() {
                       required
                     />
                   </div>
-                  <Button type="submit" className="h-11 w-full bg-[#0b2847] hover:bg-[#0d355f]" disabled={loading}>
+                  <Button type="submit" className="h-11 w-full" disabled={loading}>
                     {loading ? "Sending reset link..." : "Send Reset Link"}
                   </Button>
                 </form>
@@ -372,13 +371,13 @@ export default function Auth() {
                       minLength={6}
                     />
                   </div>
-                  <Button type="submit" className="h-11 w-full bg-[#0b2847] hover:bg-[#0d355f]" disabled={loading}>
+                  <Button type="submit" className="h-11 w-full" disabled={loading}>
                     {loading ? "Creating account..." : "Create Account"}
                   </Button>
                 </form>
               </TabsContent>
                 </Tabs>
-                <div className="mt-6 flex items-center justify-center gap-2 border-t border-slate-100 pt-5 text-xs text-slate-400">
+                <div className="mt-6 flex items-center justify-center gap-2 border-t border-border pt-5 text-xs text-muted-foreground">
                   <ShieldCheck className="h-3.5 w-3.5" /> Your data stays inside your secure workspace.
                 </div>
               </CardContent>

@@ -81,13 +81,13 @@ export default function AdminUsers() {
         </Card>
         <Card>
           <CardContent className="pt-6 text-center">
-            <p className="text-3xl font-bold text-amber-500">{pendingCount}</p>
+            <p className="text-3xl font-bold text-warning">{pendingCount}</p>
             <p className="text-sm text-muted-foreground">Pending</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6 text-center">
-            <p className="text-3xl font-bold text-green-500">{approvedCount}</p>
+            <p className="text-3xl font-bold text-success">{approvedCount}</p>
             <p className="text-sm text-muted-foreground">Approved</p>
           </CardContent>
         </Card>
@@ -120,9 +120,9 @@ export default function AdminUsers() {
                         <Badge className="bg-primary text-primary-foreground text-xs">Admin</Badge>
                       )}
                       {user.is_approved ? (
-                        <Badge variant="outline" className="text-green-600 border-green-600 text-xs">Approved</Badge>
+                        <Badge variant="outline" className="text-success border-success text-xs">Approved</Badge>
                       ) : (
-                        <Badge variant="outline" className="text-amber-500 border-amber-500 text-xs">Pending</Badge>
+                        <Badge variant="outline" className="text-warning border-warning text-xs">Pending</Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">{user.email}</p>

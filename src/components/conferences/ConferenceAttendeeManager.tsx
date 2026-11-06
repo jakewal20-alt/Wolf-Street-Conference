@@ -61,7 +61,7 @@ export function ConferenceAttendeeManager({ conferenceId }: ConferenceAttendeeMa
           <Button
             variant={isCurrentUserAttending ? "default" : "outline"}
             size="sm"
-            className={isCurrentUserAttending ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+            className={isCurrentUserAttending ? "bg-success text-success-foreground hover:bg-success/90" : ""}
             onClick={toggleMyAttendance}
             disabled={isAdding || isRemoving}
           >

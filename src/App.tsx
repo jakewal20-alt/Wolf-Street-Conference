@@ -38,13 +38,13 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <SidebarProvider>
-                  <div className="flex min-h-screen w-full bg-[#f4f7fb]">
+                  <div className="flex min-h-screen w-full bg-background">
                     <AppSidebar />
                     <div className="flex-1 flex flex-col">
-                      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl sm:px-6">
+                      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur sm:px-6">
                         <div className="flex items-center gap-3">
                           <SidebarTrigger />
-                          <span className="hidden text-sm font-semibold text-slate-700 sm:inline">Relationship intelligence</span>
+                          <span className="hidden text-sm font-semibold text-foreground sm:inline">Relationship intelligence</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <ThemeToggle />
