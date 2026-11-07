@@ -1077,6 +1077,8 @@ export type Database = {
           created_by: string
           email: string | null
           id: string
+          next_follow_up_date: string | null
+          next_follow_up_note: string | null
           linked_opportunity_id: string | null
           notes: string | null
           phone: string | null
@@ -1096,6 +1098,8 @@ export type Database = {
           created_by: string
           email?: string | null
           id?: string
+          next_follow_up_date?: string | null
+          next_follow_up_note?: string | null
           linked_opportunity_id?: string | null
           notes?: string | null
           phone?: string | null
@@ -1115,6 +1119,8 @@ export type Database = {
           created_by?: string
           email?: string | null
           id?: string
+          next_follow_up_date?: string | null
+          next_follow_up_note?: string | null
           linked_opportunity_id?: string | null
           notes?: string | null
           phone?: string | null
@@ -1213,6 +1219,8 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          next_follow_up_date: string | null
+          next_follow_up_note: string | null
           linkedin_url: string | null
           name: string
           notes: string | null
@@ -1226,6 +1234,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          next_follow_up_date?: string | null
+          next_follow_up_note?: string | null
           linkedin_url?: string | null
           name: string
           notes?: string | null
@@ -1239,6 +1249,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          next_follow_up_date?: string | null
+          next_follow_up_note?: string | null
           linkedin_url?: string | null
           name?: string
           notes?: string | null
