@@ -28,8 +28,8 @@ export default function AdminUsers() {
       });
       if (error) {
         // Surface the function's own message (e.g. "Enter a valid email address").
-        const ctx = (error as { context?: Response }).context;
-        const detail = ctx ? await ctx.json().catch(() => null) : null;
+        const ctx = (error as { context?: unknown }).context;
+        const detail = ctx instanceof Response ? await ctx.json().catch(() => null) : null;
         throw new Error(detail?.error ?? error.message);
       }
       return data as InviteResult;

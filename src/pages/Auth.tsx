@@ -27,6 +27,10 @@ export default function Auth() {
   const [newPassword, setNewPassword] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
+  // After sign-in, go back where we came from (e.g. /sso for Wolf Street
+  // single sign-on). Same-site paths only, never another origin.
+  const nextParam = new URLSearchParams(location.search).get("next") ?? "";
+  const nextPath = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
   const { toast } = useToast();
 
   // Check if we're on the reset password page
@@ -41,9 +45,9 @@ export default function Auth() {
   useEffect(() => {
     if (location.pathname === "/reset-password") return;
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/", { replace: true });
+      if (session) navigate(nextPath, { replace: true });
     });
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, nextPath]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +66,7 @@ export default function Auth() {
         description: "You've successfully signed in.",
       });
 
-      navigate("/");
+      navigate(nextPath);
     } catch (error: any) {
       toast({
         title: "Sign in failed",
