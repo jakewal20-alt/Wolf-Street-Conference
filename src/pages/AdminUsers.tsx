@@ -12,7 +12,7 @@ import { safeFormat } from "@/utils/dateHelpers";
 import { PageLayout, PageHeader } from "@/components/PageLayout";
 
 type InviteResult =
-  | { status: "invited"; approved: boolean; emailed: boolean; invite_url: string }
+  | { status: "invited"; resent?: boolean; approved: boolean; emailed: boolean; email_error?: string | null; invite_url: string }
   | { status: "existing"; approved: boolean };
 
 export default function AdminUsers() {
@@ -42,7 +42,7 @@ export default function AdminUsers() {
       if (result.status === "existing") {
         toast.success(`${email} already has an account. It's approved.`);
       } else if (result.emailed) {
-        toast.success(`Invite sent to ${email}`);
+        toast.success(result.resent ? `New invite link sent to ${email}` : `Invite sent to ${email}`);
       } else {
         toast.success("Invite created. Copy the link and send it yourself.");
       }
@@ -168,7 +168,7 @@ export default function AdminUsers() {
               <p>
                 {lastInvite.result.emailed
                   ? <>Emailed to <span className="font-medium">{lastInvite.email}</span>. If it doesn't arrive, send them this link:</>
-                  : <>The email couldn't be sent. Send <span className="font-medium">{lastInvite.email}</span> this link yourself:</>}
+                  : <>The email couldn't be sent{lastInvite.result.email_error ? <> ({lastInvite.result.email_error})</> : null}. Send <span className="font-medium">{lastInvite.email}</span> this link yourself:</>}
               </p>
               <div className="flex gap-2">
                 <Input readOnly value={lastInvite.result.invite_url} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />

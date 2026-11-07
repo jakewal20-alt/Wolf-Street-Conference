@@ -8,7 +8,9 @@
  *   the profile approved, and tries to email the link through Resend.
  * - Always returns the link so the admin can copy and send it themselves:
  *   Resend may not deliver without a verified sending domain.
- * - Email already registered: approves that account instead (no new link).
+ * - Email already registered: approves it; if they've never signed in, sends a
+ *   fresh set-your-password link (recovery) instead of failing.
+ * - Sender: EMAIL_FROM_ADDRESS (must be on a domain verified in Resend).
  *
  * The link signs the person in and opens /reset-password, where they choose a
  * password. That URL must be in Supabase Auth > URL Configuration > Redirect URLs.
@@ -62,31 +64,54 @@ Deno.serve(async (req) => {
   const appUrl = ALLOWED_ORIGINS.has(origin) ? origin : DEFAULT_APP_URL;
   const { admin } = auth;
 
-  // Already has an account? Approve it rather than failing.
+  // Already has an account? Approve it. If they've never signed in (e.g. the
+  // first invite email didn't arrive), send a fresh set-your-password link.
   const { data: existing } = await admin
     .from("profiles")
     .select("id, is_approved")
     .ilike("email", email)
     .maybeSingle();
+
+  let userId: string;
+  let inviteUrl: string;
+  let resent = false;
+
   if (existing) {
     if (!existing.is_approved) {
       const { error } = await admin.from("profiles").update({ is_approved: true }).eq("id", existing.id);
       if (error) return json({ error: "Could not approve the existing account" }, 500);
     }
-    return json({ status: "existing", approved: true });
-  }
-
-  const { data: link, error: linkError } = await admin.auth.admin.generateLink({
-    type: "invite",
-    email,
-    options: {
-      data: fullName ? { full_name: fullName } : {},
-      redirectTo: `${appUrl}/reset-password`,
-    },
-  });
-  if (linkError || !link?.user || !link.properties?.action_link) {
-    console.error("[admin-invite-user] generateLink failed:", linkError?.message);
-    return json({ error: linkError?.message ?? "Could not create the invite" }, 400);
+    const { data: existingUser } = await admin.auth.admin.getUserById(existing.id);
+    if (existingUser?.user?.last_sign_in_at) {
+      return json({ status: "existing", approved: true });
+    }
+    const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: `${appUrl}/reset-password` },
+    });
+    if (linkError || !link?.properties?.action_link) {
+      console.error("[admin-invite-user] recovery link failed:", linkError?.message);
+      return json({ error: linkError?.message ?? "Could not create a new invite link" }, 400);
+    }
+    userId = existing.id;
+    inviteUrl = link.properties.action_link;
+    resent = true;
+  } else {
+    const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: {
+        data: fullName ? { full_name: fullName } : {},
+        redirectTo: `${appUrl}/reset-password`,
+      },
+    });
+    if (linkError || !link?.user || !link.properties?.action_link) {
+      console.error("[admin-invite-user] generateLink failed:", linkError?.message);
+      return json({ error: linkError?.message ?? "Could not create the invite" }, 400);
+    }
+    userId = link.user.id;
+    inviteUrl = link.properties.action_link;
   }
 
   // The new-user trigger creates the profile unapproved; the admin invited
@@ -94,13 +119,15 @@ Deno.serve(async (req) => {
   const { error: approveError } = await admin
     .from("profiles")
     .update({ is_approved: true, ...(fullName ? { full_name: fullName } : {}) })
-    .eq("id", link.user.id);
+    .eq("id", userId);
   if (approveError) console.error("[admin-invite-user] approve failed:", approveError.message);
 
-  const inviteUrl = link.properties.action_link;
   let emailed = false;
+  let emailError: string | null = null;
   const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (resendKey) {
+  if (!resendKey) {
+    emailError = "RESEND_API_KEY is not set";
+  } else {
     const inviter = escapeHtml(auth.user.email ?? "Your team");
     const greeting = fullName ? `Hi ${escapeHtml(fullName)},` : "Hi,";
     const { error: sendError } = await new Resend(resendKey).emails.send({
@@ -115,9 +142,20 @@ Deno.serve(async (req) => {
           <p style="font-size:13px;color:#555">This link works once and expires in 24 hours. Your email and password also sign you in to the other Wolf Street apps you've been given access to.</p>
         </div>`,
     });
-    if (sendError) console.error("[admin-invite-user] email failed:", sendError.message);
-    else emailed = true;
+    if (sendError) {
+      emailError = sendError.message;
+      console.error("[admin-invite-user] email failed:", sendError.message, "from:", FROM_EMAIL);
+    } else {
+      emailed = true;
+    }
   }
 
-  return json({ status: "invited", approved: !approveError, emailed, invite_url: inviteUrl });
+  return json({
+    status: "invited",
+    resent,
+    approved: !approveError,
+    emailed,
+    email_error: emailError,
+    invite_url: inviteUrl,
+  });
 });
