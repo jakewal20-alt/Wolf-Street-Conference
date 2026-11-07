@@ -6,7 +6,7 @@
  * other app exchanges for its OWN session with
  * verifyOtp({ token_hash, type: "magiclink" }). Refresh tokens are never shared.
  *
- * POST { app: "forecast" | "samklr", return: "<absolute URL>" }
+ * POST { app: "forecast" | "samklr" | "wolfstreet", return: "<absolute URL>" }
  * → { redirect: "<return URL without fragment>#wolfstreet_sso=<hashed_token>" }
  *
  * - The return URL's origin must be listed exactly in the SSO_ALLOWED_ORIGINS
@@ -21,7 +21,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const APPS = new Set(["forecast", "samklr"]);
+const APPS = new Set(["forecast", "samklr", "wolfstreet"]);
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

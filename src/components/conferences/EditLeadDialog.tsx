@@ -26,6 +26,8 @@ export function EditLeadDialog({ open, onOpenChange, lead, conferenceId }: EditL
     phone: "",
     notes: "",
     status: "new",
+    next_follow_up_date: "",
+    next_follow_up_note: "",
   });
 
   useEffect(() => {
@@ -38,6 +40,8 @@ export function EditLeadDialog({ open, onOpenChange, lead, conferenceId }: EditL
         phone: lead.phone || "",
         notes: lead.notes || "",
         status: lead.status || "new",
+        next_follow_up_date: lead.next_follow_up_date || "",
+        next_follow_up_note: lead.next_follow_up_note || "",
       });
     }
   }, [lead]);
@@ -54,6 +58,8 @@ export function EditLeadDialog({ open, onOpenChange, lead, conferenceId }: EditL
           phone: data.phone || null,
           notes: data.notes || null,
           status: data.status,
+          next_follow_up_date: data.next_follow_up_date || null,
+          next_follow_up_note: data.next_follow_up_note.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", lead.id);
@@ -172,6 +178,27 @@ export function EditLeadDialog({ open, onOpenChange, lead, conferenceId }: EditL
               placeholder="Additional notes about this lead..."
               rows={3}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="next_follow_up_date">Next follow-up</Label>
+              <Input
+                id="next_follow_up_date"
+                type="date"
+                value={formData.next_follow_up_date}
+                onChange={(e) => setFormData({ ...formData, next_follow_up_date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="next_follow_up_note">Follow-up about</Label>
+              <Input
+                id="next_follow_up_note"
+                value={formData.next_follow_up_note}
+                onChange={(e) => setFormData({ ...formData, next_follow_up_note: e.target.value })}
+                placeholder="Send capability brief"
+              />
+            </div>
           </div>
 
           <DialogFooter>

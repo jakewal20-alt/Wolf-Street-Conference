@@ -10,6 +10,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 import { 
   Building2, 
   Phone, 
@@ -34,6 +37,8 @@ interface Contact {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  next_follow_up_date?: string | null;
+  next_follow_up_note?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,8 +70,27 @@ const touchpointTypeColors: Record<string, string> = {
 
 export default function ContactDetailDialog({ contact, open, onOpenChange }: ContactDetailDialogProps) {
   const [isLogOutreachOpen, setIsLogOutreachOpen] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState(contact.next_follow_up_date ?? '');
+  const [followUpNote, setFollowUpNote] = useState(contact.next_follow_up_note ?? '');
+  const followUpChanged =
+    followUpDate !== (contact.next_follow_up_date ?? '') || followUpNote !== (contact.next_follow_up_note ?? '');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const saveFollowUp = useMutation({
+    mutationFn: async ({ date, note }: { date: string; note: string }) => {
+      const { error } = await supabase
+        .from('contacts')
+        .update({ next_follow_up_date: date || null, next_follow_up_note: note.trim() || null })
+        .eq('id', contact.id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, { date }) => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success(date ? 'Follow-up saved' : 'Follow-up cleared');
+    },
+    onError: () => toast.error('Could not save the follow-up'),
+  });
 
   const { data: touchpoints, isLoading } = useQuery({
     queryKey: ['touchpoints', contact.id],
@@ -176,6 +200,35 @@ export default function ContactDetailDialog({ contact, open, onOpenChange }: Con
                 {contact.notes}
               </div>
             )}
+          </div>
+
+          {/* Next follow-up (feeds "Follow-ups due" here and on the Wolf Street home page) */}
+          <div className="mt-4 grid gap-3 rounded-md border border-border p-3 sm:grid-cols-[10rem_1fr_auto] sm:items-end">
+            <div className="space-y-1.5">
+              <Label htmlFor="contact-follow-up-date">Next follow-up</Label>
+              <Input
+                id="contact-follow-up-date"
+                type="date"
+                value={followUpDate}
+                onChange={(e) => setFollowUpDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="contact-follow-up-note">About</Label>
+              <Input
+                id="contact-follow-up-note"
+                value={followUpNote}
+                onChange={(e) => setFollowUpNote(e.target.value)}
+                placeholder="Send capability brief"
+              />
+            </div>
+            <Button
+              size="sm"
+              disabled={!followUpChanged || saveFollowUp.isPending}
+              onClick={() => saveFollowUp.mutate({ date: followUpDate, note: followUpNote })}
+            >
+              Save
+            </Button>
           </div>
 
           <Separator className="my-4" />
