@@ -44,6 +44,10 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+        // Hand-off pages must always run the latest code: an app shell cached
+        // from before /sso existed sends people to a plain sign-in and loses
+        // the way back to Forecast/SAMklr.
+        navigateFallbackDenylist: [/^\/sso/, /^\/reset-password/],
         // Supabase responses (user data, auth) are deliberately NOT cached:
         // a shared/kiosk device must not keep CRM data after sign-out.
       }
