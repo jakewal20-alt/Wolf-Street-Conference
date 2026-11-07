@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import SharedConference from "./pages/SharedConference";
 import AdminUsers from "./pages/AdminUsers";
 import Today from "./pages/Today";
+import Sso from "./pages/Sso";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<Auth />} />
           <Route path="/shared/:token" element={<SharedConference />} />
+          <Route path="/sso" element={<Sso />} />
 
           {/* Protected routes */}
           <Route

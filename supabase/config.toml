@@ -51,6 +51,9 @@ verify_jwt = true
 [functions.admin-invite-user]
 verify_jwt = true
 
+[functions.sso-handoff]
+verify_jwt = true
+
 # Authenticates with its own FORECAST_API_TOKEN, not a Supabase user JWT.
 [functions.forecast-conferences]
 verify_jwt = false
