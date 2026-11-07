@@ -50,14 +50,15 @@ const App = () => (
             path="/*"
             element={
               <ProtectedRoute>
-                <SidebarProvider>
-                  <div className="flex min-h-screen w-full bg-background">
+                {/* Wolf Street suite bar: full width above sidebar + content, like Forecast and SAMklr. */}
+                <WolfStreetBar />
+                <SidebarProvider className="min-h-[calc(100svh-var(--suite-bar-h,0px))]">
+                  <div className="flex min-h-[calc(100svh-var(--suite-bar-h,0px))] w-full bg-background">
                     <AppSidebar />
                     <div className="flex min-w-0 flex-1 flex-col">
                       <ScrollToTop />
-                      {/* Suite bar + header stay pinned together, so the bar is on every page. */}
-                      <div className="sticky top-0 z-20">
-                      <WolfStreetBar />
+                      {/* Header pins just below the suite bar. */}
+                      <div className="sticky top-[var(--suite-bar-h,0px)] z-20">
                       <header className="flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur sm:px-6">
                         <div className="flex items-center gap-3">
                           <SidebarTrigger />
