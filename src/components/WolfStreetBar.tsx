@@ -35,6 +35,22 @@ export function WolfStreetBar() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Publish the bar's height as --suite-bar-h so the fixed sidebar and the
+  // sticky header sit just below it.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const update = () => root.style.setProperty("--suite-bar-h", `${el.offsetHeight}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--suite-bar-h");
+    };
+  }, []);
+
   // React 18 doesn't wire custom events through props; attach directly.
   useEffect(() => {
     const el = ref.current;
@@ -47,6 +63,8 @@ export function WolfStreetBar() {
   if (!BAR_URL) return null;
 
   return (
+    // Wrapper div: React 18 doesn't map className onto custom elements.
+    <div className="sticky top-0 z-30">
     <wolfstreet-bar ref={ref} current="hallway" email={email} signout={email ? "" : undefined}>
       <div className="flex items-center gap-3 bg-[#1b2129] px-5 py-1 text-xs text-white/70">
         <span className="font-semibold uppercase tracking-widest text-white/60">Wolf Street</span>
@@ -58,5 +76,6 @@ export function WolfStreetBar() {
         )}
       </div>
     </wolfstreet-bar>
+    </div>
   );
 }
