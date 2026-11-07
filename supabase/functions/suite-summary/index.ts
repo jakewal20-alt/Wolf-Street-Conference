@@ -20,6 +20,8 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import { addDays, daysBetween, normalizeDate, todayIn } from "../_shared/dates.ts";
 
 const APP_URL = "https://bacnswolfstreet.com";
+/** Stable per-conference link: opens that conference in Hallway (same id as the forecast-conferences feed). */
+const conferenceUrl = (id: string) => `${APP_URL}/conferences?selected=${encodeURIComponent(id)}`;
 const DEFAULT_HOME_ORIGIN = "https://wolfstreet-production.up.railway.app";
 
 function allowedOrigins(): Set<string> {
@@ -96,7 +98,7 @@ async function summarize(db: SupabaseClient, today: string) {
         kind: "conference",
         title: next.name,
         due: next.start!,
-        url: `${APP_URL}/conferences`,
+        url: conferenceUrl(next.id),
         detail: [next.location, next.end !== next.start ? `${next.start} to ${next.end}` : next.start].filter(Boolean).join(" · "),
       });
       const leads = await db
@@ -104,7 +106,7 @@ async function summarize(db: SupabaseClient, today: string) {
         .select("id", { count: "exact", head: true })
         .eq("conference_id", next.id);
       if (leads.error) notCovered.push({ what: "Leads", why: "Couldn't count leads for the next conference" });
-      else leadsStat = ({ label: "Leads at next conference", value: leads.count ?? 0, url: `${APP_URL}/conferences`, hint: next.name });
+      else leadsStat = ({ label: "Leads at next conference", value: leads.count ?? 0, url: conferenceUrl(next.id), hint: next.name });
     } else {
       headline = "No upcoming conferences";
     }
@@ -166,7 +168,7 @@ async function summarize(db: SupabaseClient, today: string) {
         due: l.next_follow_up_date as string,
         title: `Follow up with ${l.contact_name}`,
         detail: [l.company, l.next_follow_up_note, "conference lead"].filter(Boolean).join(" · "),
-        url: `${APP_URL}/conferences`,
+        url: conferenceUrl(l.conference_id),
       })),
     ].sort((a, b) => a.due.localeCompare(b.due));
     const overdue = followups.filter((f) => f.due < today).length;
