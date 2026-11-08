@@ -46,7 +46,7 @@ Public sign-up is off. Admins invite people from **Users** (the `admin-invite-us
 
 ## Wolf Street single sign-on
 
-Hallway is the sign-in point for the suite. Another app with no session sends the browser to `https://bacnswolfstreet.com/sso?app=forecast|samklr&return=<url>`. Hallway signs the person in if needed, then the `sso-handoff` function returns a one-time magic-link code. The browser goes back to `<return>#wolfstreet_sso=<code>`, and the app exchanges the code with `verifyOtp({ token_hash, type: "magiclink" })` for its own session. Refresh tokens are never shared between apps.
+Hallway is the sign-in point for the suite. Another app with no session sends the browser to `https://bacnswolfstreet.com/sso?app=forecast|samklr|ghostwriter|wolfstreet&return=<url>`. Hallway signs the person in if needed, then the `sso-handoff` function returns a one-time magic-link code. The browser goes back to `<return>#wolfstreet_sso=<code>`, and the app exchanges the code with `verifyOtp({ token_hash, type: "magiclink" })` for its own session. Refresh tokens are never shared between apps.
 
 Return addresses must match the `SSO_ALLOWED_ORIGINS` secret (comma-separated origins). If it's unset, SSO is off.
 
