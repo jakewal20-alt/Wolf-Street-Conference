@@ -62,10 +62,10 @@ interface ContactDetailDialogProps {
 }
 
 const touchpointTypeColors: Record<string, string> = {
-  call: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  email: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  meeting: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-  event: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  call: 'bg-success/10 text-success',
+  email: 'bg-info-blue-bg text-info-blue',
+  meeting: 'bg-primary/10 text-primary',
+  event: 'bg-copper-muted text-copper',
 };
 
 export default function ContactDetailDialog({ contact, open, onOpenChange }: ContactDetailDialogProps) {
@@ -256,7 +256,7 @@ export default function ContactDetailDialog({ contact, open, onOpenChange }: Con
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <Badge className={touchpointTypeColors[touchpoint.type] || 'bg-gray-100 text-gray-800'}>
+                        <Badge variant="outline" className={`border-transparent ${touchpointTypeColors[touchpoint.type] || 'bg-muted text-muted-foreground'}`}>
                           {touchpoint.type}
                         </Badge>
                         {touchpoint.outcome && (
@@ -292,9 +292,9 @@ export default function ContactDetailDialog({ contact, open, onOpenChange }: Con
                         }}
                       >
                         {relatedItems[touchpoint.related_id].type === 'opportunity' ? (
-                          <FileText className="h-4 w-4 text-blue-500" />
+                          <FileText className="h-4 w-4 text-info-blue" />
                         ) : (
-                          <Award className="h-4 w-4 text-green-500" />
+                          <Award className="h-4 w-4 text-success" />
                         )}
                         <span className="flex-1 truncate">
                           {relatedItems[touchpoint.related_id].title}

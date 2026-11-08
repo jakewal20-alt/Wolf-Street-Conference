@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { getEventColor } from "@/utils/eventTypeHelpers";
 import {
   Users,
   Plane,
@@ -24,28 +25,28 @@ const eventTypeItems: LegendItem[] = [
     id: "conference",
     label: "Conference",
     description: "Events & expos",
-    color: "bg-purple-500",
+    color: getEventColor(null, "conference"),
     icon: <Presentation className="h-3.5 w-3.5" />,
   },
   {
     id: "meeting",
     label: "Meeting",
     description: "Calls & meetings",
-    color: "bg-blue-500",
+    color: getEventColor(null, "meeting"),
     icon: <Users className="h-3.5 w-3.5" />,
   },
   {
     id: "travel",
     label: "Travel",
     description: "Trips & travel",
-    color: "bg-teal-500",
+    color: getEventColor(null, "travel"),
     icon: <Plane className="h-3.5 w-3.5" />,
   },
   {
     id: "webinar",
     label: "Webinar",
     description: "Online events",
-    color: "bg-indigo-500",
+    color: getEventColor(null, "webinar"),
     icon: <Video className="h-3.5 w-3.5" />,
   },
 ];
@@ -73,18 +74,17 @@ export function CalendarLegend({
                 onMouseEnter={() => setHoveredItem(`event-${item.id}`)}
                 onMouseLeave={() => setHoveredItem(null)}
                 className={cn(
-                  "relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium",
-                  "bg-card border shadow-sm",
-                  "transition-all duration-300 ease-out",
-                  isHovered && "scale-105 shadow-md border-primary/30"
+                  "relative flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium",
+                  "bg-card border",
+                  "transition-colors duration-150",
+                  isHovered && "border-primary/40"
                 )}
               >
                 <span
                   className={cn(
-                    "w-2.5 h-2.5 rounded-full transition-transform duration-300",
-                    item.color,
-                    isHovered && "scale-125"
+                    "w-2.5 h-2.5 rounded-full"
                   )}
+                  style={{ backgroundColor: item.color }}
                 />
                 <span className="text-foreground/80">{item.label}</span>
 
@@ -93,8 +93,8 @@ export function CalendarLegend({
                   className={cn(
                     "absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-md text-[10px]",
                     "bg-popover text-popover-foreground shadow-lg border",
-                    "transition-all duration-200 whitespace-nowrap",
-                    isHovered ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+                    "transition-opacity duration-150 whitespace-nowrap",
+                    isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
                   )}
                 >
                   {item.description}

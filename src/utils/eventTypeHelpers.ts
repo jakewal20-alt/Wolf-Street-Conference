@@ -23,32 +23,32 @@ export interface EventTypeConfig {
 const EVENT_TYPE_MAP: Record<string, EventTypeConfig> = {
   conference: {
     label: "Conference",
-    defaultColor: "#8B5CF6", // purple
+    defaultColor: "#7a5c9e", // muted violet
     defaultIcon: "presentation",
   },
   meeting: {
     label: "Meeting",
-    defaultColor: "#3B82F6", // blue
+    defaultColor: "#3a5a7e", // info blue
     defaultIcon: "users",
   },
   deadline: {
     label: "Deadline",
-    defaultColor: "#EF4444", // red
+    defaultColor: "#9a3934", // danger
     defaultIcon: "alert",
   },
   travel: {
     label: "Travel",
-    defaultColor: "#14B8A6", // teal
+    defaultColor: "#2f7d78", // muted teal
     defaultIcon: "plane",
   },
   webinar: {
     label: "Webinar",
-    defaultColor: "#6366F1", // indigo
+    defaultColor: "#4d5fa3", // slate indigo
     defaultIcon: "video",
   },
   reminder: {
     label: "Reminder",
-    defaultColor: "#F59E0B", // orange
+    defaultColor: "#9a5f2c", // copper
     defaultIcon: "clock",
   },
 };
@@ -68,6 +68,13 @@ const ICON_MAP: Record<string, LucideIcon> = {
   presentation: Presentation,
 };
 
+// Event-type colours, in Wolf Street's palette. The legend reads from here too.
+export const EVENT_TYPES = EVENT_TYPE_MAP;
+
+// Defaults saved before the palette change (Tailwind 500s). Events stored with one of these show
+// the current default for their type instead, so old and new events match.
+const LEGACY_DEFAULTS = new Set(["#8b5cf6", "#3b82f6", "#ef4444", "#14b8a6", "#6366f1", "#f59e0b", "#10b981"]);
+
 export function getEventTypeLabel(type: string | null, typeCustom: string | null): string {
   if (typeCustom) return typeCustom;
   if (!type) return "Meeting"; // default
@@ -78,7 +85,7 @@ export function getEventColor(
   colorHex: string | null, 
   type: string | null
 ): string {
-  if (colorHex) return colorHex;
+  if (colorHex && !LEGACY_DEFAULTS.has(colorHex.toLowerCase())) return colorHex;
   if (!type) return EVENT_TYPE_MAP.meeting.defaultColor;
   return EVENT_TYPE_MAP[type]?.defaultColor || EVENT_TYPE_MAP.meeting.defaultColor;
 }
