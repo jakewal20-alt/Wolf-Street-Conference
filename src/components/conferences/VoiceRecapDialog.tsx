@@ -28,6 +28,7 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
   const [selectedLeadId, setSelectedLeadId] = useState<string>("none");
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const [audioFormat, setAudioFormat] = useState<'webm' | 'mp4'>('webm');
   const recorderRef = useRef<AudioRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
@@ -80,11 +81,13 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
 
     try {
       const base64Audio = await recorderRef.current.stop();
+      const format = recorderRef.current.format;
       setAudioBase64(base64Audio);
+      setAudioFormat(format);
 
       // Transcribe via Whisper
       const { data, error } = await supabase.functions.invoke("voice-to-text", {
-        body: { audio: base64Audio },
+        body: { audio: base64Audio, format },
       });
 
       if (error) throw error;
@@ -146,10 +149,10 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
           byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
         const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "audio/webm" });
+        const blob = new Blob([byteArray], { type: `audio/${audioFormat}` });
 
         try {
-          audioUrl = await uploadUserFile(user.id, "voice_recap.webm", blob);
+          audioUrl = await uploadUserFile(user.id, `voice_recap.${audioFormat}`, blob);
         } catch (uploadError) {
           console.error("Audio upload error:", uploadError);
         }

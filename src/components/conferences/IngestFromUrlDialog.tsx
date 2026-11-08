@@ -59,19 +59,11 @@ export function IngestFromUrlDialog({ open, onOpenChange }: IngestFromUrlDialogP
 
   const ingestMutation = useMutation({
     mutationFn: async (conferenceUrl: string) => {
-      console.log("=== Starting conference ingestion ===");
-      console.log("URL:", conferenceUrl);
-      
       const { data, error } = await supabase.functions.invoke('ingest-conference-from-url', {
         body: { url: conferenceUrl }
       });
 
-      console.log("Edge function response:", { data, error });
-
-      if (error) {
-        console.error("Edge function error:", error);
-        throw error;
-      }
+      if (error) throw error;
       
       if (!data) {
         console.error("No data returned from edge function");
@@ -104,7 +96,7 @@ export function IngestFromUrlDialog({ open, onOpenChange }: IngestFromUrlDialogP
     onError: (error) => {
       console.error("Mutation failed:", error);
       toast.error(
-        "Failed to extract conference data",
+        "Couldn't import that conference",
         {
           description: error.message,
           duration: 5000,

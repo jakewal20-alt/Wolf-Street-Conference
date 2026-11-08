@@ -106,7 +106,8 @@ export default function Today() {
 
       return {
         name: profileResult.data?.full_name?.trim().split(/\s+/)[0] || null,
-        events: (eventsResult.data || []) as CalendarEvent[],
+        // Text dates: skip rows like "TBD" that sort after every real date.
+        events: ((eventsResult.data || []) as CalendarEvent[]).filter((e) => tryParseDate(e.start_date)),
         conferences: conferencesResult.data || [],
         touchesToday: touchpointsResult.error ? null : touchpointsResult.count || 0,
         followUps,

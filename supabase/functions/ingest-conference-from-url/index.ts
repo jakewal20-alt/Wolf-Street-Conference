@@ -89,95 +89,14 @@ serve(async (req) => {
     const supabase = auth.admin;
     console.log("User authenticated:", user.id);
 
-    // Helper function to derive conference name from URL
-    const deriveNameFromUrl = (urlString: string): string => {
-      try {
-        const parsedUrl = new URL(urlString);
-        const hostname = parsedUrl.hostname.toLowerCase();
-        
-        // Special case for I/ITSEC
-        if (hostname.includes('iitsec')) {
-          return 'I/ITSEC';
-        }
-        
-        // General case: extract domain name
-        const domainParts = hostname.replace('www.', '').split('.');
-        const domainName = domainParts[0];
-        
-        // Capitalize and clean up
-        return domainName.toUpperCase().replace(/[^A-Z0-9]/g, '');
-      } catch {
-        return 'Conference';
-      }
-    };
 
-    // Helper function to create fallback conference
-    const createFallbackConference = async (urlString: string, errorDetails: string) => {
-      console.log("Creating fallback conference from URL:", urlString);
-      
-      const minimalConference = {
-        name: deriveNameFromUrl(urlString),
-        start_date: null,
-        end_date: null,
-        location: null,
-        description: "Conference imported from website; details not parsed automatically.",
-        tags: ['conference'],
-        source_url: urlString,
-        website_data: {
-          error: 'fetch_failed',
-          details: errorDetails,
-          ingested_at: new Date().toISOString(),
-        },
-        created_by: user.id,
-      };
-
-      // Upsert to database
-      const { data: existing } = await supabase
-        .from('conferences')
-        .select('id')
-        .eq('source_url', urlString)
-        .eq('created_by', user.id)
-        .maybeSingle();
-
-      let conferenceId: string;
-      if (existing) {
-        const { error: updateError } = await supabase
-          .from('conferences')
-          .update(minimalConference)
-          .eq('id', existing.id);
-        
-        if (updateError) {
-          console.error("Failed to update fallback conference:", updateError);
-          throw updateError;
-        }
-        conferenceId = existing.id;
-      } else {
-        const { data: newConf, error: insertError } = await supabase
-          .from('conferences')
-          .insert(minimalConference)
-          .select()
-          .single();
-        
-        if (insertError) {
-          console.error("Failed to create fallback conference:", insertError);
-          throw insertError;
-        }
-        conferenceId = newConf.id;
-      }
-
-      console.log("Fallback conference created:", conferenceId);
-      return {
-        success: true,
-        conference: {
-          id: conferenceId,
-          ...minimalConference,
-        },
-        raw: {
-          error: 'fetch_failed',
-          details: errorDetails,
-        },
-      };
-    };
+    // Pages we can't read, or that don't show the dates, are refused rather
+    // than saved with invented dates (that's how "Unknown Conference" rows
+    // with "TBD" dates got into the calendar).
+    const cannotImport = (reason: string) => new Response(
+      JSON.stringify({ success: false, error: reason }),
+      { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
     // Fetch the HTML content
     console.log("Step 2: Fetching HTML from URL...");
@@ -197,13 +116,7 @@ serve(async (req) => {
       if (!htmlResponse.ok) {
         const errorMsg = `HTTP ${htmlResponse.status}: ${htmlResponse.statusText}`;
         console.error("HTTP error:", errorMsg);
-        console.log("Falling back to minimal conference creation");
-        
-        const fallbackResult = await createFallbackConference(url, errorMsg);
-        return new Response(
-          JSON.stringify(fallbackResult),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return cannotImport("That website wouldn't let Hallway read the page. Add the conference by hand, or try the event's own page.");
       }
 
       html = fetched.text;
@@ -220,13 +133,7 @@ serve(async (req) => {
       const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
       console.error("Fetch error:", errorMsg);
       console.error("Stack:", fetchError instanceof Error ? fetchError.stack : 'N/A');
-      console.log("Falling back to minimal conference creation");
-      
-      const fallbackResult = await createFallbackConference(url, errorMsg);
-      return new Response(
-        JSON.stringify(fallbackResult),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return cannotImport("Hallway couldn't open that page. Check the link, or add the conference by hand.");
     }
 
     // Use OpenAI GPT-5 to parse the conference data for better extraction
@@ -395,35 +302,14 @@ Example good description:
     const parsedData = JSON.parse(toolCall.function.arguments);
     console.log("Successfully parsed conference data:", JSON.stringify(parsedData, null, 2));
 
-    // Validate required fields - use fallbacks if missing
+    // Name and both dates are required; never invent them.
     if (!parsedData.name || !parsedData.start_date || !parsedData.end_date) {
-      console.log("Missing some required fields, using fallbacks:", { 
-        name: !!parsedData.name, 
-        start_date: !!parsedData.start_date, 
-        end_date: !!parsedData.end_date 
+      console.log("Missing required fields:", {
+        name: !!parsedData.name, start_date: !!parsedData.start_date, end_date: !!parsedData.end_date,
       });
-      
-      // If we at least have a name, try to create a conference with TBD dates
-      const fallbackName = parsedData.name || deriveNameFromUrl(url);
-      
-      // Create a fallback with today + 30 days as placeholder dates if dates are missing
-      const today = new Date();
-      const futureDate = new Date(today);
-      futureDate.setDate(futureDate.getDate() + 30);
-      
-      const fallbackStartDate = parsedData.start_date || today.toISOString().split('T')[0];
-      const fallbackEndDate = parsedData.end_date || futureDate.toISOString().split('T')[0];
-      
-      // Update parsedData with fallbacks
-      parsedData.name = fallbackName;
-      parsedData.start_date = fallbackStartDate;
-      parsedData.end_date = fallbackEndDate;
-      parsedData.short_description = parsedData.short_description || 
-        `Conference imported from ${new URL(url).hostname}. Date information may need to be updated manually.`;
-      parsedData.tags = parsedData.tags || ['conference', 'imported'];
-      
-      console.log("Using fallback data:", JSON.stringify(parsedData, null, 2));
+      return cannotImport("Hallway couldn't find the conference name and dates on that page. Try the event's own page, or add it by hand.");
     }
+    parsedData.tags = parsedData.tags || ['conference', 'imported'];
 
     // Check if conference with this URL already exists
     console.log("Step 4: Checking for existing conference...");

@@ -104,7 +104,7 @@ export default function Settings() {
   return (
     <div className="container mx-auto p-6 max-w-6xl space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-primary">Settings</h1>
         <p className="text-muted-foreground mt-2">
           Manage your profile and preferences
         </p>
