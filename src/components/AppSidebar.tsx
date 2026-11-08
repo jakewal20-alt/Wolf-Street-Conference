@@ -61,7 +61,7 @@ export function AppSidebar() {
         <div className="flex items-center justify-center border-b border-sidebar-border p-5">
           {!isCollapsed && (
             <div className="flex w-full items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1"><img src="/branding/intel-hero-wolfstreet.png" alt="" className="h-full w-full rounded-lg" /></div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#0c1522] p-1"><img src="/branding/wolfstreet-mark.png" alt="" className="h-full w-full object-contain" /></div>
               <div>
                 <h1 className="font-display text-lg font-semibold tracking-tight text-sidebar-accent-foreground">Hallway</h1>
                 <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-primary">A Wolf Street app</p>
@@ -69,7 +69,7 @@ export function AppSidebar() {
             </div>
           )}
           {isCollapsed && (
-            <img src="/branding/intel-hero-wolfstreet.png" alt="Hallway" className="h-9 w-9 rounded-lg" />
+            <div className="flex h-9 w-9 items-center justify-center rounded bg-[#0c1522] p-1"><img src="/branding/wolfstreet-mark.png" alt="Hallway" className="h-full w-full object-contain" /></div>
           )}
         </div>
 
