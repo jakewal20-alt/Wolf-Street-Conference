@@ -11,8 +11,9 @@
  *   Leads, contacts, notes, recaps and user data are never read.
  * - verify_jwt = false in config.toml: Forecast authenticates with this token,
  *   not a Supabase user JWT.
- * - Multi-company (future): when organizations land, bind the token to one
- *   org (e.g. FORECAST_ORG_ID) and filter conferences by org_id.
+ * - One company only: the token is bound to the company whose slug is in
+ *   FORECAST_ORG_SLUG (default "mavrc"). Other companies' conferences are
+ *   never returned. Unknown slug: the endpoint fails closed (503).
  *
  * Optional query params:
  *   ?include_past_days=N   also include conferences that ended in the last N
@@ -91,9 +92,21 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  const orgSlug = (Deno.env.get("FORECAST_ORG_SLUG") ?? "mavrc").trim().toLowerCase();
+  const { data: org, error: orgError } = await admin
+    .from("organizations")
+    .select("id")
+    .eq("slug", orgSlug)
+    .maybeSingle();
+  if (orgError || !org) {
+    console.error("[forecast-conferences] company not found for FORECAST_ORG_SLUG:", orgSlug, orgError?.message);
+    return json({ error: "Endpoint not configured" }, 503);
+  }
+
   const { data: rows, error } = await admin
     .from("conferences")
     .select("id, name, start_date, end_date, location, description, exec_summary, tags, source_url, updated_at")
+    .eq("org_id", org.id)
     .or("archived.is.null,archived.eq.false")
     .order("start_date", { ascending: true })
     .limit(2000);
@@ -119,6 +132,7 @@ Deno.serve(async (req) => {
       .from("conference_speakers")
       .select("conference_id, name, title, organization, session_title, session_time, source_url, extracted_at")
       .in("conference_id", ids)
+      .eq("org_id", org.id)
       .order("name", { ascending: true });
     if (speakersError) {
       // Table may not exist yet if the migration hasn't run; still serve conferences.

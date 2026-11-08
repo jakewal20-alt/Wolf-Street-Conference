@@ -527,6 +527,7 @@ export type Database = {
       }
       calendar_events: {
         Row: {
+          org_id: string
           all_day: boolean | null
           color: string | null
           color_hex: string | null
@@ -549,6 +550,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          org_id?: string
           all_day?: boolean | null
           color?: string | null
           color_hex?: string | null
@@ -571,6 +573,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          org_id?: string
           all_day?: boolean | null
           color?: string | null
           color_hex?: string | null
@@ -841,6 +844,7 @@ export type Database = {
       }
       conference_collaborators: {
         Row: {
+          org_id: string
           conference_id: string
           created_at: string
           id: string
@@ -849,6 +853,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          org_id?: string
           conference_id: string
           created_at?: string
           id?: string
@@ -857,6 +862,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          org_id?: string
           conference_id?: string
           created_at?: string
           id?: string
@@ -876,6 +882,7 @@ export type Database = {
       }
       conference_speakers: {
         Row: {
+          org_id: string
           conference_id: string
           created_at: string
           created_by: string | null
@@ -890,6 +897,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          org_id?: string
           conference_id: string
           created_at?: string
           created_by?: string | null
@@ -904,6 +912,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          org_id?: string
           conference_id?: string
           created_at?: string
           created_by?: string | null
@@ -929,6 +938,7 @@ export type Database = {
       }
       conference_share_links: {
         Row: {
+          org_id: string
           id: string
           conference_id: string
           token: string
@@ -938,6 +948,7 @@ export type Database = {
           created_at: string
         }
         Insert: {
+          org_id?: string
           id?: string
           conference_id: string
           token: string
@@ -947,6 +958,7 @@ export type Database = {
           created_at?: string
         }
         Update: {
+          org_id?: string
           id?: string
           conference_id?: string
           token?: string
@@ -967,6 +979,7 @@ export type Database = {
       }
       conference_voice_recaps: {
         Row: {
+          org_id: string
           id: string
           conference_id: string
           lead_id: string | null
@@ -978,6 +991,7 @@ export type Database = {
           created_at: string
         }
         Insert: {
+          org_id?: string
           id?: string
           conference_id: string
           lead_id?: string | null
@@ -989,6 +1003,7 @@ export type Database = {
           created_at?: string
         }
         Update: {
+          org_id?: string
           id?: string
           conference_id?: string
           lead_id?: string | null
@@ -1018,6 +1033,7 @@ export type Database = {
       }
       conference_attendees: {
         Row: {
+          org_id: string
           id: string
           conference_id: string
           user_id: string
@@ -1026,6 +1042,7 @@ export type Database = {
           created_at: string
         }
         Insert: {
+          org_id?: string
           id?: string
           conference_id: string
           user_id: string
@@ -1034,6 +1051,7 @@ export type Database = {
           created_at?: string
         }
         Update: {
+          org_id?: string
           id?: string
           conference_id?: string
           user_id?: string
@@ -1067,6 +1085,7 @@ export type Database = {
       }
       conference_leads: {
         Row: {
+          org_id: string
           ai_fit_score: number | null
           ai_reason: string | null
           card_image_url: string | null
@@ -1088,6 +1107,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          org_id?: string
           ai_fit_score?: number | null
           ai_reason?: string | null
           card_image_url?: string | null
@@ -1109,6 +1129,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          org_id?: string
           ai_fit_score?: number | null
           ai_reason?: string | null
           card_image_url?: string | null
@@ -1148,6 +1169,7 @@ export type Database = {
       }
       conferences: {
         Row: {
+          org_id: string
           archived: boolean
           calendar_event_id: string | null
           calendar_source: string | null
@@ -1167,6 +1189,7 @@ export type Database = {
           website_data: Json | null
         }
         Insert: {
+          org_id?: string
           archived?: boolean
           calendar_event_id?: string | null
           calendar_source?: string | null
@@ -1186,6 +1209,7 @@ export type Database = {
           website_data?: Json | null
         }
         Update: {
+          org_id?: string
           archived?: boolean
           calendar_event_id?: string | null
           calendar_source?: string | null
@@ -1216,6 +1240,7 @@ export type Database = {
       }
       contacts: {
         Row: {
+          org_id: string
           created_at: string
           email: string | null
           id: string
@@ -1231,6 +1256,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          org_id?: string
           created_at?: string
           email?: string | null
           id?: string
@@ -1246,6 +1272,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          org_id?: string
           created_at?: string
           email?: string | null
           id?: string
@@ -2452,8 +2479,34 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          is_platform_admin: boolean
+          org_id: string | null
           created_at: string | null
           email: string
           full_name: string | null
@@ -2463,6 +2516,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          is_platform_admin?: boolean
+          org_id?: string | null
           created_at?: string | null
           email: string
           full_name?: string | null
@@ -2472,6 +2527,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          is_platform_admin?: boolean
+          org_id?: string | null
           created_at?: string | null
           email?: string
           full_name?: string | null
@@ -2980,6 +3037,7 @@ export type Database = {
       }
       touchpoints: {
         Row: {
+          org_id: string
           contact_id: string
           created_at: string
           date: string
@@ -2993,6 +3051,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          org_id?: string
           contact_id: string
           created_at?: string
           date?: string
@@ -3006,6 +3065,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          org_id?: string
           contact_id?: string
           created_at?: string
           date?: string

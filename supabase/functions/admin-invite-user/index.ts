@@ -2,7 +2,14 @@
  * admin-invite-user — the only way new people get a Hallway / Wolf Street
  * account once public sign-up is turned off.
  *
- * POST { email, full_name? }   (admin only)
+ * POST { email, full_name?, org_id? }   (company admin or platform admin)
+ *
+ * - Company admins invite into their own company. Only the platform admin may
+ *   pass org_id to invite into another company (e.g. a new customer's first
+ *   admin, with make_admin: true).
+ * - Someone already in a different company is refused (one company each).
+ * - A Wolf Street account with no Hallway company yet (e.g. a Forecast-only
+ *   user) is added to the company and approved.
  *
  * - Creates the account with an invite link (auth.admin.generateLink), marks
  *   the profile approved, and tries to email the link through Resend.
@@ -45,9 +52,9 @@ Deno.serve(async (req) => {
 
   const auth = await authenticate(req, corsHeaders);
   if (auth instanceof Response) return auth;
-  if (!auth.isAdmin) return json({ error: "Only admins can invite people" }, 403);
+  if (!auth.isAdmin && !auth.isPlatformAdmin) return json({ error: "Only admins can invite people" }, 403);
 
-  let body: { email?: unknown; full_name?: unknown };
+  let body: { email?: unknown; full_name?: unknown; org_id?: unknown; make_admin?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -60,30 +67,53 @@ Deno.serve(async (req) => {
     return json({ error: "Enter a valid email address" }, 400);
   }
 
-  const origin = req.headers.get("Origin") ?? "";
-  const appUrl = ALLOWED_ORIGINS.has(origin) ? origin : DEFAULT_APP_URL;
   const { admin } = auth;
 
-  // Already has an account? Approve it. If they've never signed in (e.g. the
-  // first invite email didn't arrive), send a fresh set-your-password link.
-  const { data: existing } = await admin
-    .from("profiles")
-    .select("id, is_approved")
-    .ilike("email", email)
-    .maybeSingle();
+  // Which company? Company admins: always their own. Platform admin: any.
+  let orgId = auth.orgId;
+  if (typeof body.org_id === "string" && body.org_id && body.org_id !== auth.orgId) {
+    if (!auth.isPlatformAdmin) return json({ error: "You can only invite people into your own company" }, 403);
+    orgId = body.org_id;
+  }
+  const { data: org } = await admin.from("organizations").select("id, name").eq("id", orgId).maybeSingle();
+  if (!org) return json({ error: "Company not found" }, 404);
+  const makeAdmin = body.make_admin === true && (auth.isPlatformAdmin || auth.isAdmin);
+
+  const origin = req.headers.get("Origin") ?? "";
+  const appUrl = ALLOWED_ORIGINS.has(origin) ? origin : DEFAULT_APP_URL;
+
+  // Existing Wolf Street account (with or without a Hallway profile)?
+  const { data: existingId } = await admin.rpc("find_user_id_by_email", { p_email: email });
 
   let userId: string;
   let inviteUrl: string;
   let resent = false;
 
-  if (existing) {
-    if (!existing.is_approved) {
-      const { error } = await admin.from("profiles").update({ is_approved: true }).eq("id", existing.id);
-      if (error) return json({ error: "Could not approve the existing account" }, 500);
+  if (existingId) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id, org_id")
+      .eq("id", existingId)
+      .maybeSingle();
+    if (profile?.org_id && profile.org_id !== orgId) {
+      return json({ error: "This person can't be added to this company. Contact Wolf Street support." }, 409);
     }
-    const { data: existingUser } = await admin.auth.admin.getUserById(existing.id);
+    userId = existingId as string;
+    if (!profile) {
+      const { error } = await admin.from("profiles").insert({
+        id: userId, email, full_name: fullName || email.split("@")[0], is_admin: false, is_approved: false,
+      });
+      if (error) return json({ error: "Could not set up the existing account" }, 500);
+    }
+    const { data: existingUser } = await admin.auth.admin.getUserById(userId);
     if (existingUser?.user?.last_sign_in_at) {
-      return json({ status: "existing", approved: true });
+      // They already have a password (maybe from another Wolf Street app): just add them.
+      const { error } = await admin
+        .from("profiles")
+        .update({ org_id: orgId, is_approved: true, ...(makeAdmin ? { is_admin: true } : {}) })
+        .eq("id", userId);
+      if (error) return json({ error: "Could not add the existing account" }, 500);
+      return json({ status: "existing", approved: true, company: org.name });
     }
     const { data: link, error: linkError } = await admin.auth.admin.generateLink({
       type: "recovery",
@@ -94,7 +124,6 @@ Deno.serve(async (req) => {
       console.error("[admin-invite-user] recovery link failed:", linkError?.message);
       return json({ error: linkError?.message ?? "Could not create a new invite link" }, 400);
     }
-    userId = existing.id;
     inviteUrl = link.properties.action_link;
     resent = true;
   } else {
@@ -114,11 +143,17 @@ Deno.serve(async (req) => {
     inviteUrl = link.properties.action_link;
   }
 
-  // The new-user trigger creates the profile unapproved; the admin invited
-  // them, so approve it. (Service role: the privilege trigger allows this.)
+  // The new-user trigger creates the profile unapproved and without a
+  // company; the admin invited them, so add and approve them.
+  // (Service role: the privilege trigger allows this.)
   const { error: approveError } = await admin
     .from("profiles")
-    .update({ is_approved: true, ...(fullName ? { full_name: fullName } : {}) })
+    .update({
+      org_id: orgId,
+      is_approved: true,
+      ...(makeAdmin ? { is_admin: true } : {}),
+      ...(fullName ? { full_name: fullName } : {}),
+    })
     .eq("id", userId);
   if (approveError) console.error("[admin-invite-user] approve failed:", approveError.message);
 
@@ -137,7 +172,7 @@ Deno.serve(async (req) => {
       html: `
         <div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:520px;color:#1d2b3e">
           <p>${greeting}</p>
-          <p>${inviter} invited you to Hallway, the conference and relationship workspace in the Wolf Street suite.</p>
+          <p>${inviter} invited you to ${escapeHtml(org.name)}'s Hallway, the conference and relationship workspace in the Wolf Street suite.</p>
           <p><a href="${escapeHtml(inviteUrl)}" style="display:inline-block;background:#1d2b3e;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none">Accept invite and set a password</a></p>
           <p style="font-size:13px;color:#555">This link works once and expires in 24 hours. Your email and password also sign you in to the other Wolf Street apps you've been given access to.</p>
         </div>`,
@@ -154,6 +189,7 @@ Deno.serve(async (req) => {
     status: "invited",
     resent,
     approved: !approveError,
+    company: org.name,
     emailed,
     email_error: emailError,
     invite_url: inviteUrl,
