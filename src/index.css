@@ -31,10 +31,10 @@
     --destructive-foreground: 0 0% 100%; /* #ffffff */
     --border: 27 15% 88%; /* #e5e0dc */
     --input: 27 13% 83%; /* #d9d3ce */
-    --ring: 201 96% 32%; /* #0369a1 */
-    --signal: 201 96% 32%; /* #0369a1 */
+    --ring: 215 36% 18%; /* #1d2b3e navy */
+    --signal: 212 37% 36%; /* #3a5a7e Wolf Street info (was sky #0369a1) */
     --signal-foreground: 0 0% 100%; /* #ffffff */
-    --signal-muted: 201 56% 93%; /* #e3f0f7 */
+    --signal-muted: 210 32% 93%; /* #e6ecf2 */
     --inverse: 215 36% 18%; /* #1d2b3e */
     --inverse-foreground: 220 14% 91%; /* #e6e8ec */
     --inverse-muted: 215 20% 65%; /* #94a3b8 */
@@ -55,12 +55,12 @@
     --info-red-bg: 6 50% 92%; /* #f5e3e1 */
     --sidebar-background: 215 36% 18%; /* #1d2b3e */
     --sidebar-foreground: 220 14% 91%; /* #e6e8ec */
-    --sidebar-primary: 198 93% 60%; /* #38bdf8 */
-    --sidebar-primary-foreground: 215 36% 18%; /* #1d2b3e */
+    --sidebar-primary: 28 68% 64%; /* #e2a066 copper on navy (was sky #38bdf8) */
+    --sidebar-primary-foreground: 0 2% 11%; /* #1c1b1b */
     --sidebar-accent: 211 29% 22%; /* #283849 */
     --sidebar-accent-foreground: 0 0% 100%; /* #ffffff */
     --sidebar-border: 214 30% 25%; /* #2c3c51 */
-    --sidebar-ring: 198 93% 60%; /* #38bdf8 */
+    --sidebar-ring: 28 68% 64%; /* #e2a066 */
 
     --radius: 0.25rem;
 
@@ -95,10 +95,10 @@
     --destructive-foreground: 0 2% 11%; /* #1c1b1b */
     --border: 0 0% 21%; /* #353535 */
     --input: 218 6% 28%; /* #44474c */
-    --ring: 198 93% 60%; /* #38bdf8 */
-    --signal: 198 93% 60%; /* #38bdf8 */
+    --ring: 218 39% 80%; /* #b9c7e0 */
+    --signal: 211 49% 71%; /* #8fb0d6 Wolf Street info (was sky #38bdf8) */
     --signal-foreground: 207 55% 10%; /* #0b1a26 */
-    --signal-muted: 202 59% 14%; /* #0f2a3a */
+    --signal-muted: 210 31% 15%; /* #1a2633 */
     --inverse: 214 29% 15%; /* #1c2633 */
     --inverse-foreground: 220 14% 91%; /* #e6e8ec */
     --inverse-muted: 215 20% 65%; /* #94a3b8 */
@@ -119,12 +119,12 @@
     --info-red-bg: 4 33% 17%; /* #3a1f1d */
     --sidebar-background: 0 0% 5%; /* #0e0e0e */
     --sidebar-foreground: 15 7% 89%; /* #e5e2e1 */
-    --sidebar-primary: 198 93% 60%; /* #38bdf8 */
-    --sidebar-primary-foreground: 207 55% 10%; /* #0b1a26 */
+    --sidebar-primary: 28 68% 64%; /* #e2a066 */
+    --sidebar-primary-foreground: 0 2% 11%; /* #1c1b1b */
     --sidebar-accent: 0 0% 12%; /* #1f1f1f */
     --sidebar-accent-foreground: 0 0% 100%; /* #ffffff */
     --sidebar-border: 0 0% 16%; /* #2a2a2a */
-    --sidebar-ring: 198 93% 60%; /* #38bdf8 */
+    --sidebar-ring: 28 68% 64%; /* #e2a066 */
 
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-md: 0 1px 3px rgb(0 0 0 / 0.35);
