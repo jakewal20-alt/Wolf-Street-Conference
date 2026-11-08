@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { subDays, addDays } from "date-fns";
 import { parseDateLocal, safeFormat } from "@/utils/dateHelpers";
+import { getEventColor } from "@/utils/eventTypeHelpers";
 
 // Conference ids with a calendar-event creation in flight. A double click (or
 // two dialogs) reuses the same promise instead of inserting a second event.
@@ -122,11 +123,11 @@ export function useConferenceCalendarSync() {
           description,
           event_type: "conference",
           all_day: true,
-          color: "#10b981", // green for conferences
+          color: getEventColor(null, "conference"),
           user_id: user.id,
           type: "conference",
           type_custom: null,
-          color_hex: "#8B5CF6", // purple for conferences
+          color_hex: null, // follows the conference type colour
           icon_name: "presentation",
         })
         .select()

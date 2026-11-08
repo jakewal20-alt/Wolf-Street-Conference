@@ -8,27 +8,18 @@ interface ColorPickerProps {
   onChange: (color: string | null) => void;
 }
 
+// Muted, readable on cards and as a 4px edge; matches the event-type defaults.
 const PRESET_COLORS = [
-  { name: "Red", hex: "#EF4444" },
-  { name: "Orange", hex: "#F97316" },
-  { name: "Amber", hex: "#F59E0B" },
-  { name: "Yellow", hex: "#EAB308" },
-  { name: "Lime", hex: "#84CC16" },
-  { name: "Green", hex: "#22C55E" },
-  { name: "Emerald", hex: "#10B981" },
-  { name: "Teal", hex: "#14B8A6" },
-  { name: "Cyan", hex: "#06B6D4" },
-  { name: "Sky", hex: "#0EA5E9" },
-  { name: "Blue", hex: "#3B82F6" },
-  { name: "Indigo", hex: "#6366F1" },
-  { name: "Violet", hex: "#8B5CF6" },
-  { name: "Purple", hex: "#A855F7" },
-  { name: "Fuchsia", hex: "#D946EF" },
-  { name: "Pink", hex: "#EC4899" },
-  { name: "Rose", hex: "#F43F5E" },
-  { name: "Slate", hex: "#64748B" },
-  { name: "Brown", hex: "#92400E" },
-  { name: "Navy", hex: "#1E3A5F" },
+  { name: "Navy", hex: "#1d2b3e" },
+  { name: "Blue", hex: "#3a5a7e" },
+  { name: "Indigo", hex: "#4d5fa3" },
+  { name: "Violet", hex: "#7a5c9e" },
+  { name: "Rose", hex: "#a3546e" },
+  { name: "Red", hex: "#9a3934" },
+  { name: "Copper", hex: "#9a5f2c" },
+  { name: "Olive", hex: "#7a7a3a" },
+  { name: "Green", hex: "#3f7d5c" },
+  { name: "Teal", hex: "#2f7d78" },
 ];
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
@@ -64,8 +55,8 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
             key={color.hex}
             type="button"
             className={cn(
-              "h-7 w-7 rounded-full border-2 transition-all hover:scale-110",
-              value === color.hex ? "border-foreground ring-2 ring-offset-2 ring-primary scale-110" : "border-transparent hover:border-muted-foreground/50"
+              "h-7 w-7 rounded-full border-2 transition-colors",
+              value === color.hex ? "border-foreground ring-2 ring-offset-2 ring-primary" : "border-transparent hover:border-muted-foreground/50"
             )}
             style={{ backgroundColor: color.hex }}
             onClick={() => handlePresetClick(color.hex)}
@@ -76,18 +67,18 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
       <div className="flex gap-2 items-center">
         <div
           className="h-9 w-9 rounded-md border shrink-0"
-          style={{ backgroundColor: value || "#e5e7eb" }}
+          style={{ backgroundColor: value || "hsl(var(--muted))" }}
         />
         <Input
           type="text"
-          placeholder="#4F46E5"
+          placeholder="#3a5a7e"
           value={hexInput}
           onChange={(e) => handleHexChange(e.target.value)}
           className="font-mono"
         />
         <input
           type="color"
-          value={value || "#3B82F6"}
+          value={value || "#3a5a7e"}
           onChange={(e) => {
             setHexInput(e.target.value);
             onChange(e.target.value);
