@@ -19,7 +19,7 @@ if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <ThemeProvider defaultTheme="system" storageKey="wolf-street-theme">
+  <ThemeProvider defaultTheme="light" storageKey="wolf-street-theme">
     <AppErrorBoundary>
       <App />
     </AppErrorBoundary>

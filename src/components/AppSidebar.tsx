@@ -122,7 +122,9 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Logout */}
+        {/* Sign out lives in the Wolf Street bar (like Forecast and SAMklr).
+            Only without the bar (local dev) does the sidebar keep its own. */}
+        {!import.meta.env.VITE_WOLFSTREET_BAR_URL && (
         <div className="mt-auto border-t border-sidebar-border p-2">
           <SidebarMenuButton asChild>
             <button
@@ -130,10 +132,11 @@ export function AppSidebar() {
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
               <LogOut className="h-5 w-5" />
-              {!isCollapsed && <span>Logout</span>}
+              {!isCollapsed && <span>Sign out</span>}
             </button>
           </SidebarMenuButton>
         </div>
+        )}
       </SidebarContent>
     </Sidebar>
   );
