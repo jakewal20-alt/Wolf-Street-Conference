@@ -58,7 +58,7 @@ export function AppSidebar() {
     <Sidebar className={isCollapsed ? "w-14 border-r-0" : "w-64 border-r-0"} collapsible="icon">
       <SidebarContent className="bg-sidebar text-sidebar-foreground">
         {/* Branding */}
-        <div className="flex items-center justify-center border-b border-sidebar-border p-5">
+        <div className={`flex items-center justify-center border-b border-sidebar-border ${isCollapsed ? "px-0 py-3" : "p-5"}`}>
           {!isCollapsed && (
             <div className="flex w-full items-center gap-3">
               <img src="/branding/wolfstreet-mark.png" alt="" className="h-10 w-10 shrink-0 object-contain" />
@@ -69,7 +69,7 @@ export function AppSidebar() {
             </div>
           )}
           {isCollapsed && (
-            <img src="/branding/wolfstreet-mark.png" alt="Hallway" className="h-9 w-9 object-contain" />
+            <img src="/branding/wolfstreet-mark.png" alt="Hallway" className="h-8 w-8 shrink-0 object-contain" />
           )}
         </div>
 
