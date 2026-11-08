@@ -5,13 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
 /**
- * /sso?app=forecast|samklr|wolfstreet&return=<url> — Wolf Street single sign-on.
+ * /sso?app=forecast|samklr|ghostwriter|wolfstreet&return=<url> — Wolf Street single sign-on.
  *
  * Signed in → ask sso-handoff for a one-time code and send the browser back to
  * the app with it. Not signed in → Hallway's sign-in, then back here.
  * The server checks the return address against its allow list.
  */
-const APP_NAMES: Record<string, string> = { forecast: "Forecast", samklr: "SAMklr", wolfstreet: "Wolf Street" };
+const APP_NAMES: Record<string, string> = { forecast: "Forecast", samklr: "SAMklr", ghostwriter: "Ghostwriter", wolfstreet: "Wolf Street" };
 
 export default function Sso() {
   const [params] = useSearchParams();
