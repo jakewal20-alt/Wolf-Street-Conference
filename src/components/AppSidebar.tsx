@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Calendar, UserRound, Settings, LogOut, Shield, Sparkles } from "lucide-react";
+import { CalendarDays, Calendar, UserRound, Settings, LogOut, Shield, Sparkles, ScanLine } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,7 @@ const navigationItems = [
   { title: "Calendar", url: "/calendar", icon: Calendar },
   { title: "Conferences", url: "/conferences", icon: CalendarDays },
   { title: "Relationships", url: "/contacts", icon: UserRound },
+  { title: "Floor Mode", url: "/floor", icon: ScanLine },
 ];
 
 const workspaceItems = [{ title: "Settings", url: "/settings", icon: Settings }];

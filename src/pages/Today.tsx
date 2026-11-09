@@ -196,6 +196,24 @@ export default function Today() {
         </div>
       </header>
 
+      {/* At (or about to leave for) a conference: one tap into Floor Mode. */}
+      {nextConference && daysToConference !== null && daysToConference <= 2 && (
+        <button
+          type="button"
+          onClick={() => navigate(`/floor?conference=${nextConference.id}`)}
+          className="flex w-full items-center gap-4 rounded-2xl bg-primary px-5 py-5 text-left text-primary-foreground shadow-sm transition active:scale-[0.99]"
+        >
+          <ScanLine className="h-8 w-8 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-semibold">Open Floor Mode</span>
+            <span className="block truncate text-sm opacity-80">
+              {nextConference.name} {conferenceWhen}: scan cards, record recaps, see who to meet
+            </span>
+          </span>
+          <ArrowRight className="h-5 w-5 shrink-0" />
+        </button>
+      )}
+
       {/* Numbers */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((s) => (

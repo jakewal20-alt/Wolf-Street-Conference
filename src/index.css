@@ -284,3 +284,11 @@
     linear-gradient(#c88a4f, #c88a4f) bottom left / 34px 2px no-repeat, linear-gradient(#c88a4f, #c88a4f) bottom left / 2px 34px no-repeat,
     linear-gradient(#c88a4f, #c88a4f) bottom right / 34px 2px no-repeat, linear-gradient(#c88a4f, #c88a4f) bottom right / 2px 34px no-repeat; }
 .signin-wordmark { margin: 0; display: grid; justify-items: center; font: 800 clamp(26px, 6vw, 34px)/0.92 "Saira", "Archivo Narrow", sans-serif; font-stretch: 125%; color: #f4efe7; }
+
+/* Floor Mode "Print / PDF": just the hit list, no app chrome. */
+@media print {
+  body:has(.floor-mode) wolfstreet-bar,
+  body:has(.floor-mode) [data-sidebar="sidebar"],
+  body:has(.floor-mode) .sticky { display: none !important; }
+  .floor-mode { max-width: none; padding: 0; }
+}
