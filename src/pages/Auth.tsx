@@ -267,8 +267,8 @@ function SuiteShell({ children }: { children: React.ReactNode }) {
       <img
         src="/branding/wolfstreet-logo.png"
         alt="Wolf Street"
-        width={560}
-        height={560}
+        width={512}
+        height={512}
         className="h-32 w-32 sm:h-40 sm:w-40"
       />
       <p className="-mt-1 mb-6 text-center text-xs font-medium uppercase tracking-[0.2em] text-inverse-muted">
