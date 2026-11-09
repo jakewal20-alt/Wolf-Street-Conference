@@ -24,6 +24,17 @@
 
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="format-detection" content="telephone=no" />
+    <script>
+      // Wolf Street theme (v1.2) before first paint: saved choice, else the computer's setting.
+      (function () {
+        try {
+          var p = localStorage.getItem("ws-theme-pref");
+          var dark = p === "dark" || ((p !== "light") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.add(dark ? "dark" : "light");
+          document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>
