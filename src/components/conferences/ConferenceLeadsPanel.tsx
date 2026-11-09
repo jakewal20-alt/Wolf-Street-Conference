@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ForecastPursuits } from "./ForecastPursuits";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -237,6 +238,8 @@ export function ConferenceLeadsPanel({ conference }: ConferenceLeadsPanelProps) 
       <VoiceRecapsList conferenceId={conference.id} />
 
       {/* Executive Summary Section */}
+      <ForecastPursuits conferenceId={conference.id} />
+
       <ExecutiveSummary conference={conference} />
 
       <AddLeadDialog

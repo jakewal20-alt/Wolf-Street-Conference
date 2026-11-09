@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UploadBusinessCardDialog } from "@/components/conferences/UploadBusinessCardDialog";
 import { VoiceRecapDialog } from "@/components/conferences/VoiceRecapDialog";
+import { ForecastPursuits } from "@/components/conferences/ForecastPursuits";
 import { safeFormat, tryParseDate } from "@/utils/dateHelpers";
 import { cn } from "@/lib/utils";
 
@@ -232,6 +233,8 @@ export default function Floor() {
           All leads for this conference →
         </Link>
       </section>
+
+      <ForecastPursuits conferenceId={conference.id} />
 
       {/* Hit list */}
       <section className="space-y-4">

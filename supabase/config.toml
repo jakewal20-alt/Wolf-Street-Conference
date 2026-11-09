@@ -62,3 +62,6 @@ verify_jwt = false
 # Authenticates with its own FORECAST_API_TOKEN, not a Supabase user JWT.
 [functions.forecast-conferences]
 verify_jwt = false
+
+[functions.forecast-pursuits]
+verify_jwt = true
