@@ -107,7 +107,7 @@ export default function SharedConference() {
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{conference.name}</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-primary">{conference.name}</h1>
           <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
             {conference.location && (
               <span className="flex items-center gap-1">

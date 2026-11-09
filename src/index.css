@@ -41,6 +41,11 @@
     --copper: 28 56% 39%; /* #9a5f2c */
     --copper-foreground: 0 0% 100%; /* #ffffff */
     --copper-muted: 30 58% 93%; /* #f7ece1 */
+    /* Sign-in page: the logo's own night background and orange (same in dark mode). */
+    --signin: 216 48% 9%; /* #0c1522 */
+    --signin-foreground: 0 0% 100%; /* #ffffff */
+    --signin-accent: 37 82% 50%; /* #e69617 */
+    --signin-accent-hover: 37 86% 57%; /* #f0a632 */
     --urgent: 3 50% 40%; /* #9a3934 */
     --urgent-foreground: 0 0% 100%; /* #ffffff */
     --warning: 28 56% 39%; /* #9a5f2c */
