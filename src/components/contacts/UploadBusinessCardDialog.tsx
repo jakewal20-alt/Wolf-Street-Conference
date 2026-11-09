@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Camera, Upload, Loader2, X, CreditCard, Image } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
+import { aiErrorMessage } from '@/lib/friendlyFunctionErrors';
 
 interface ExtractedData {
   contact_name: string | null;
@@ -86,7 +87,7 @@ export default function UploadBusinessCardDialog({
       }
     } catch (err) {
       console.error('Extraction error:', err);
-      toast.error('Failed to extract business card info');
+      toast.error(aiErrorMessage(err, 'Failed to extract business card info'));
     } finally {
       setIsExtracting(false);
     }
