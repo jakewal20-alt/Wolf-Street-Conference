@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { aiErrorMessage } from "@/lib/friendlyFunctionErrors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -100,7 +101,7 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
       }
     } catch (error) {
       console.error("Error transcribing:", error);
-      toast.error("Failed to transcribe recording");
+      toast.error(aiErrorMessage(error, "Failed to transcribe recording"));
     } finally {
       setIsTranscribing(false);
     }
@@ -123,7 +124,7 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
       }
     } catch (error) {
       console.error("Error generating summary:", error);
-      toast.error("Failed to generate summary");
+      toast.error(aiErrorMessage(error, "Failed to generate summary"));
     } finally {
       setIsSummarizing(false);
     }
