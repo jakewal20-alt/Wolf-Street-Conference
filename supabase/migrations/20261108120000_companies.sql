@@ -202,7 +202,7 @@ BEGIN
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    NULLIF(trim(NEW.raw_user_meta_data->>'full_name'), ''),  -- no name yet; never the email's prefix
     false,
     false
   )
