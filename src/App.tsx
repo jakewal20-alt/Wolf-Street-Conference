@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageTransition } from "@/components/PageTransition";
+import { useBarHasThemeSwitch } from "@/lib/suiteTheme";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WolfStreetBar } from "@/components/WolfStreetBar";
 import Conferences from "./pages/Conferences";
@@ -48,6 +49,12 @@ function CurrentPageName() {
   return name ? <span className="text-sm font-semibold text-foreground">{name}</span> : null;
 }
 
+
+/** Hallway's own switch, only until the Wolf Street bar provides the shared one. */
+function HeaderThemeToggle() {
+  return useBarHasThemeSwitch() ? null : <ThemeToggle />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -81,7 +88,7 @@ const App = () => (
                           <CurrentPageName />
                         </div>
                         <div className="flex items-center gap-2">
-                          <ThemeToggle />
+                          <HeaderThemeToggle />
                         </div>
                       </header>
                       </div>
