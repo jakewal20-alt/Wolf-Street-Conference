@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight } from "lucide-react";
+import { WOLFSTREET_HOME_SSO_PATH } from "@/lib/suite";
 
 
 export default function Auth() {
@@ -17,10 +18,11 @@ export default function Auth() {
   const [newPassword, setNewPassword] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-  // After sign-in, go back where we came from (e.g. /sso for Wolf Street
-  // single sign-on). Same-site paths only, never another origin.
+  // After sign-in, go back where we came from (e.g. /sso for another Wolf
+  // Street app). Same-site paths only, never another origin. A plain sign-in
+  // lands on the Wolf Street home page, through SSO.
   const nextParam = new URLSearchParams(location.search).get("next") ?? "";
-  const nextPath = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
+  const nextPath = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : WOLFSTREET_HOME_SSO_PATH;
   const { toast } = useToast();
 
   // Check if we're on the reset password page
@@ -117,7 +119,7 @@ export default function Auth() {
         description: "You're signed in.",
       });
 
-      navigate("/");
+      navigate(WOLFSTREET_HOME_SSO_PATH);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       toast({
