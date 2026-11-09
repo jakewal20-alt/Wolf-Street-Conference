@@ -22,6 +22,17 @@ import { addDays, daysBetween, normalizeDate, todayIn } from "../_shared/dates.t
 const APP_URL = "https://bacnswolfstreet.com";
 /** Stable per-conference link: opens that conference in Hallway (same id as the forecast-conferences feed). */
 const conferenceUrl = (id: string) => `${APP_URL}/conferences?selected=${encodeURIComponent(id)}`;
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "2026-11-30", "2026-12-04" → "Nov 30 – Dec 4, 2026" (calendar dates, no timezone shift). */
+function dateRange(start: string, end: string): string {
+  const [sy, sm, sd] = start.split("-").map(Number);
+  const [ey, em, ed] = end.split("-").map(Number);
+  const s = `${MONTHS[sm - 1]} ${sd}`;
+  if (start === end) return `${s}, ${sy}`;
+  if (sy !== ey) return `${s}, ${sy} – ${MONTHS[em - 1]} ${ed}, ${ey}`;
+  return sm === em ? `${s}–${ed}, ${sy}` : `${s} – ${MONTHS[em - 1]} ${ed}, ${ey}`;
+}
 const DEFAULT_HOME_ORIGIN = "https://wolfstreet-production.up.railway.app";
 
 function allowedOrigins(): Set<string> {
@@ -99,7 +110,7 @@ async function summarize(db: SupabaseClient, today: string) {
         title: next.name,
         due: next.start!,
         url: conferenceUrl(next.id),
-        detail: [next.location, next.end !== next.start ? `${next.start} to ${next.end}` : next.start].filter(Boolean).join(" · "),
+        detail: [next.location, dateRange(next.start!, next.end!)].filter(Boolean).join(" · "),
       });
       const leads = await db
         .from("conference_leads")
