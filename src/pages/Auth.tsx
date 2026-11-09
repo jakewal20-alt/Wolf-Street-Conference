@@ -265,7 +265,7 @@ function SuiteShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-signin px-4 py-8">
       <img
-        src="/branding/wolfstreet-logo.png"
+        src="https://wolfstreet-production.up.railway.app/brand/wolfstreet-logo.png"
         alt="Wolf Street"
         width={512}
         height={512}

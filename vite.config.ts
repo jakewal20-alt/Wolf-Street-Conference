@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.png", "favicon.svg", "apple-touch-icon.png"],
+      includeAssets: ["favicon.ico"],
       manifest: {
         name: "Hallway — Wolf Street",
         short_name: "Hallway",
