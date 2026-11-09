@@ -57,21 +57,12 @@ export function AppSidebar() {
   return (
     <Sidebar className={isCollapsed ? "w-14 border-r-0" : "w-64 border-r-0"} collapsible="icon">
       <SidebarContent className="bg-sidebar text-sidebar-foreground">
-        {/* Branding */}
-        <div className={`flex items-center justify-center border-b border-sidebar-border ${isCollapsed ? "px-0 py-3" : "p-5"}`}>
-          {!isCollapsed && (
-            <div className="flex w-full items-center gap-3">
-              <img src="/branding/wolfstreet-mark.png" alt="" className="h-10 w-10 shrink-0 object-contain" />
-              <div>
-                <h1 className="font-display text-lg font-semibold tracking-tight text-sidebar-accent-foreground">Hallway</h1>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-primary">A Wolf Street app</p>
-              </div>
-            </div>
-          )}
-          {isCollapsed && (
-            <img src="/branding/wolfstreet-mark.png" alt="Hallway" className="h-8 w-8 shrink-0 object-contain" />
-          )}
-        </div>
+        {/* App name, like Forecast: the Wolf Street wolf lives only in the suite bar. */}
+        {!isCollapsed && (
+          <div className="border-b border-sidebar-border px-5 py-4">
+            <h1 className="font-display text-xl font-bold tracking-tight text-sidebar-accent-foreground">Hallway</h1>
+          </div>
+        )}
 
         {/* Navigation */}
         <SidebarGroup>
