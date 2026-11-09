@@ -26,14 +26,20 @@ export function VoiceRecapsList({ conferenceId, readOnly = false }: VoiceRecapsL
         .from("conference_voice_recaps")
         .select(`
           *,
-          profiles:recorded_by (full_name, email),
           conference_leads:lead_id (contact_name, company)
         `)
         .eq("conference_id", conferenceId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      // recorded_by points at auth.users, not profiles, so PostgREST can't
+      // embed the recorder; look the names up separately.
+      const recorderIds = [...new Set((data ?? []).map((r) => r.recorded_by).filter(Boolean))];
+      const { data: people } = recorderIds.length
+        ? await supabase.from("profiles").select("id, full_name, email").in("id", recorderIds)
+        : { data: [] };
+      const byId = new Map((people ?? []).map((p) => [p.id, { full_name: p.full_name, email: p.email }]));
+      return (data ?? []).map((r) => ({ ...r, profiles: byId.get(r.recorded_by) ?? null }));
     },
   });
 

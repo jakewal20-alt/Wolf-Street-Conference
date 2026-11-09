@@ -492,7 +492,8 @@ const Calendar = () => {
               </Button>
 
               {/* Outlook Sync Button */}
-              <OutlookSyncButton calendarEvents={calendarEvents} />
+              {/* Hidden until Microsoft credentials are set up (VITE_OUTLOOK_ENABLED=true). */}
+              {import.meta.env.VITE_OUTLOOK_ENABLED === "true" && <OutlookSyncButton calendarEvents={calendarEvents} />}
             </div>
           </Card>
 
@@ -568,13 +569,11 @@ const Calendar = () => {
         {/* Main Calendar Area */}
         <div className="min-w-0 flex-1 space-y-6">
           {/* Header */}
-          <Card className="p-6 shadow-none">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+          <header>
+            <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h1 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-2">Calendar</h1>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  Track conferences and events
-                </p>
+                <h1 className="font-display text-3xl font-semibold tracking-tight text-primary sm:text-4xl">Calendar</h1>
+                <p className="mt-2 text-sm text-muted-foreground">Track conferences and events</p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-1 border rounded-md p-1 bg-card">
@@ -610,7 +609,7 @@ const Calendar = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="shadow-sm hover:shadow-md transition-all"
+                    className="transition-colors hover:bg-accent"
                     onClick={() => {
                       if (viewMode === "day") setCurrentDate(addDays(currentDate, -1));
                       else if (viewMode === "week") setCurrentDate(addDays(currentDate, -7));
@@ -621,7 +620,7 @@ const Calendar = () => {
                   </Button>
                   <Button
                     variant="outline"
-                    className="shadow-sm hover:shadow-md transition-all"
+                    className="transition-colors hover:bg-accent"
                     onClick={() => setCurrentDate(new Date())}
                   >
                     <CalendarIcon className="h-4 w-4 mr-2" />
@@ -630,7 +629,7 @@ const Calendar = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="shadow-sm hover:shadow-md transition-all"
+                    className="transition-colors hover:bg-accent"
                     onClick={() => {
                       if (viewMode === "day") setCurrentDate(addDays(currentDate, 1));
                       else if (viewMode === "week") setCurrentDate(addDays(currentDate, 7));
@@ -642,7 +641,7 @@ const Calendar = () => {
                 </div>
               </div>
             </div>
-          </Card>
+          </header>
 
           {/* Calendar Legend Bar */}
           <Card className="p-4 shadow-none">
@@ -717,7 +716,7 @@ const Calendar = () => {
                           <div
                             key={event.id}
                             className={cn(
-                              "p-4 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-shadow",
+                              "p-4 rounded-lg border-l-4 cursor-pointer transition-colors hover:bg-accent/60",
                             )}
                             style={{
                               backgroundColor: `${getEventColor(event.color_hex, event.type ?? event.event_type)}10`,
@@ -808,7 +807,7 @@ const Calendar = () => {
                             <div
                               key={event.id}
                               className={cn(
-                                "p-2 rounded-md border-l-4 text-xs cursor-pointer hover:shadow-md transition-shadow"
+                                "p-2 rounded-md border-l-4 text-xs cursor-pointer transition-colors hover:bg-accent/60"
                               )}
                               style={{
                                 backgroundColor: `${eventColor}15`,
@@ -922,7 +921,7 @@ const Calendar = () => {
                                 )}>
                                   <span className={cn(
                                     "w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200",
-                                    isCurrentDay && "bg-primary text-primary-foreground shadow-md",
+                                    isCurrentDay && "bg-primary text-primary-foreground",
                                     !isCurrentDay && "group-hover:bg-accent/50"
                                   )}>
                                     {format(day, "d")}
@@ -1025,7 +1024,7 @@ const Calendar = () => {
                           key={event.id}
                           className={cn(
                             "p-3 rounded-lg cursor-pointer",
-                            "hover:shadow-md transition-all duration-200"
+                            "transition-colors duration-200 hover:bg-accent/60"
                           )}
                           style={{
                             backgroundColor: `${eventColor}15`,

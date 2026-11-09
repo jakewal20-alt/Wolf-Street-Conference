@@ -58,10 +58,10 @@ export function AppSidebar() {
     <Sidebar className={isCollapsed ? "w-14 border-r-0" : "w-64 border-r-0"} collapsible="icon">
       <SidebarContent className="bg-sidebar text-sidebar-foreground">
         {/* Branding */}
-        <div className="flex items-center justify-center border-b border-sidebar-border p-5">
+        <div className={`flex items-center justify-center border-b border-sidebar-border ${isCollapsed ? "px-0 py-3" : "p-5"}`}>
           {!isCollapsed && (
             <div className="flex w-full items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1"><img src="/branding/intel-hero-wolfstreet.png" alt="" className="h-full w-full rounded-lg" /></div>
+              <img src="/branding/wolfstreet-mark.png" alt="" className="h-10 w-10 shrink-0 object-contain" />
               <div>
                 <h1 className="font-display text-lg font-semibold tracking-tight text-sidebar-accent-foreground">Hallway</h1>
                 <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-primary">A Wolf Street app</p>
@@ -69,7 +69,7 @@ export function AppSidebar() {
             </div>
           )}
           {isCollapsed && (
-            <img src="/branding/intel-hero-wolfstreet.png" alt="Hallway" className="h-9 w-9 rounded-lg" />
+            <img src="/branding/wolfstreet-mark.png" alt="Hallway" className="h-8 w-8 shrink-0 object-contain" />
           )}
         </div>
 
@@ -122,7 +122,9 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Logout */}
+        {/* Sign out lives in the Wolf Street bar (like Forecast and SAMklr).
+            Only without the bar (local dev) does the sidebar keep its own. */}
+        {!import.meta.env.VITE_WOLFSTREET_BAR_URL && (
         <div className="mt-auto border-t border-sidebar-border p-2">
           <SidebarMenuButton asChild>
             <button
@@ -130,10 +132,11 @@ export function AppSidebar() {
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
               <LogOut className="h-5 w-5" />
-              {!isCollapsed && <span>Logout</span>}
+              {!isCollapsed && <span>Sign out</span>}
             </button>
           </SidebarMenuButton>
         </div>
+        )}
       </SidebarContent>
     </Sidebar>
   );

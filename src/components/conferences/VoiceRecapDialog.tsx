@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { aiErrorMessage } from "@/lib/friendlyFunctionErrors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
   const [selectedLeadId, setSelectedLeadId] = useState<string>("none");
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const [audioFormat, setAudioFormat] = useState<'webm' | 'mp4'>('webm');
   const recorderRef = useRef<AudioRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
@@ -80,11 +82,13 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
 
     try {
       const base64Audio = await recorderRef.current.stop();
+      const format = recorderRef.current.format;
       setAudioBase64(base64Audio);
+      setAudioFormat(format);
 
       // Transcribe via Whisper
       const { data, error } = await supabase.functions.invoke("voice-to-text", {
-        body: { audio: base64Audio },
+        body: { audio: base64Audio, format },
       });
 
       if (error) throw error;
@@ -97,7 +101,7 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
       }
     } catch (error) {
       console.error("Error transcribing:", error);
-      toast.error("Failed to transcribe recording");
+      toast.error(aiErrorMessage(error, "Failed to transcribe recording"));
     } finally {
       setIsTranscribing(false);
     }
@@ -120,7 +124,7 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
       }
     } catch (error) {
       console.error("Error generating summary:", error);
-      toast.error("Failed to generate summary");
+      toast.error(aiErrorMessage(error, "Failed to generate summary"));
     } finally {
       setIsSummarizing(false);
     }
@@ -146,10 +150,10 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
           byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
         const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "audio/webm" });
+        const blob = new Blob([byteArray], { type: `audio/${audioFormat}` });
 
         try {
-          audioUrl = await uploadUserFile(user.id, "voice_recap.webm", blob);
+          audioUrl = await uploadUserFile(user.id, `voice_recap.${audioFormat}`, blob);
         } catch (uploadError) {
           console.error("Audio upload error:", uploadError);
         }
@@ -222,7 +226,7 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
           <div className="flex flex-col items-center gap-3 py-4">
             {isRecording && (
               <div className="flex items-center gap-2 text-destructive">
-                <span className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
+                <span className="w-3 h-3 rounded-full bg-destructive animate-pulse motion-reduce:animate-none" />
                 <span className="text-lg font-mono font-semibold">
                   {formatDuration(recordingDuration)}
                 </span>

@@ -62,6 +62,12 @@ export default {
           foreground: "hsl(var(--inverse-foreground))",
           muted: "hsl(var(--inverse-muted))",
         },
+        signin: {
+          DEFAULT: "hsl(var(--signin))",
+          foreground: "hsl(var(--signin-foreground))",
+          accent: "hsl(var(--signin-accent))",
+          "accent-hover": "hsl(var(--signin-accent-hover))",
+        },
         copper: {
           DEFAULT: "hsl(var(--copper))",
           foreground: "hsl(var(--copper-foreground))",

@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageTransition } from "@/components/PageTransition";
+import { useBarHasThemeSwitch } from "@/lib/suiteTheme";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WolfStreetBar } from "@/components/WolfStreetBar";
 import Conferences from "./pages/Conferences";
@@ -30,6 +31,28 @@ function ScrollToTop() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+const PAGE_NAMES: Record<string, string> = {
+  "/": "Today",
+  "/conferences": "Conferences",
+  "/calendar": "Calendar",
+  "/contacts": "Relationships",
+  "/settings": "Settings",
+  "/admin/users": "Users",
+};
+
+/** The sticky header names the page you're on. */
+function CurrentPageName() {
+  const { pathname } = useLocation();
+  const name = PAGE_NAMES[pathname.replace(/\/+$/, "") || "/"];
+  return name ? <span className="text-sm font-semibold text-foreground">{name}</span> : null;
+}
+
+
+/** Hallway's own switch, only until the Wolf Street bar provides the shared one. */
+function HeaderThemeToggle() {
+  return useBarHasThemeSwitch() ? null : <ThemeToggle />;
 }
 
 const App = () => (
@@ -62,10 +85,10 @@ const App = () => (
                       <header className="flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur sm:px-6">
                         <div className="flex items-center gap-3">
                           <SidebarTrigger />
-                          <span className="hidden text-sm font-semibold text-foreground sm:inline">Relationship intelligence</span>
+                          <CurrentPageName />
                         </div>
                         <div className="flex items-center gap-2">
-                          <ThemeToggle />
+                          <HeaderThemeToggle />
                         </div>
                       </header>
                       </div>

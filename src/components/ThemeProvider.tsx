@@ -5,6 +5,7 @@ interface ThemeProviderProps {
   children: ReactNode;
   defaultTheme?: string;
   storageKey?: string;
+  enableSystem?: boolean;
 }
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {

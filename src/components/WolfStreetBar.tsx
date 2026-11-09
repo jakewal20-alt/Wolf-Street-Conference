@@ -65,7 +65,7 @@ export function WolfStreetBar() {
   return (
     // Wrapper div: React 18 doesn't map className onto custom elements.
     <div className="sticky top-0 z-30">
-    <wolfstreet-bar ref={ref} current="hallway" email={email} signout={email ? "" : undefined}>
+    <wolfstreet-bar ref={ref} current="hallway" email={email} signout={email ? "" : undefined} theme-toggle="">
       <div className="flex items-center gap-3 bg-[#1b2129] px-5 py-1 text-xs text-white/70">
         <span className="font-semibold uppercase tracking-widest text-white/60">Wolf Street</span>
         <span className="ml-auto truncate">{email}</span>

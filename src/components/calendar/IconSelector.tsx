@@ -45,8 +45,8 @@ export function IconSelector({ value, onChange }: IconSelectorProps) {
             key={name}
             type="button"
             className={cn(
-              "h-10 rounded-md border-2 transition-all hover:scale-105 flex items-center justify-center",
-              value === name ? "border-foreground bg-accent" : "border-border hover:border-foreground/50"
+              "h-10 rounded-md border-2 transition-colors flex items-center justify-center",
+              value === name ? "border-foreground bg-accent" : "border-border hover:border-primary/40"
             )}
             onClick={() => onChange(value === name ? null : name)}
             title={label}
