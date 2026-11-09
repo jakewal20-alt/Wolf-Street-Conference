@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { confirmDialog } from "@/lib/confirmDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -273,10 +274,14 @@ export default function AdminUsers() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => {
-                          if (confirm(`Delete ${user.email}? This cannot be undone.`)) {
-                            deleteUserMutation.mutate(user.id);
-                          }
+                        onClick={async () => {
+                          const ok = await confirmDialog({
+                            title: `Delete ${user.email}?`,
+                            description: "This cannot be undone.",
+                            confirmLabel: "Delete",
+                            destructive: true,
+                          });
+                          if (ok) deleteUserMutation.mutate(user.id);
                         }}
                         disabled={deleteUserMutation.isPending}
                       >
