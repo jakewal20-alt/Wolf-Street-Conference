@@ -1,4 +1,6 @@
 export class AudioRecorder {
+  /** Container of the last recording: webm (Chrome, Firefox) or mp4 (Safari). */
+  format: 'webm' | 'mp4' = 'webm';
   private stream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
@@ -15,9 +17,10 @@ export class AudioRecorder {
         }
       });
 
-      this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
+      // Chrome/Firefox record webm/opus; Safari only does mp4/aac.
+      const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+        .find((t) => typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(t));
+      this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : undefined);
 
       this.chunks = [];
 
@@ -43,7 +46,8 @@ export class AudioRecorder {
 
       this.mediaRecorder.onstop = async () => {
         try {
-          const blob = new Blob(this.chunks, { type: 'audio/webm' });
+          this.format = (this.mediaRecorder?.mimeType || '').includes('mp4') ? 'mp4' : 'webm';
+          const blob = new Blob(this.chunks, { type: `audio/${this.format}` });
           const base64 = await this.blobToBase64(blob);
           
           // Cleanup

@@ -74,7 +74,6 @@ export default function Contacts() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBusinessCardOpen, setIsBusinessCardOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [isFetchingLinkedIn, setIsFetchingLinkedIn] = useState(false);
   const [newContact, setNewContact] = useState({
     name: '',
     org_name: '',
@@ -162,44 +161,6 @@ export default function Contacts() {
     },
   });
 
-  const fetchLinkedInProfiles = async () => {
-    if (!contacts || contacts.length === 0) return;
-    
-    const contactsWithoutLinkedIn = contacts.filter(c => !c.linkedin_url);
-    if (contactsWithoutLinkedIn.length === 0) {
-      toast.info('All contacts already have LinkedIn profiles');
-      return;
-    }
-
-    setIsFetchingLinkedIn(true);
-    toast.info(`Searching LinkedIn for ${contactsWithoutLinkedIn.length} contacts...`);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('fetch-contact-linkedin', {
-        body: { contactIds: contactsWithoutLinkedIn.map(c => c.id) }
-      });
-
-      if (error) throw error;
-
-      if (data?.success) {
-        const { summary } = data;
-        if (summary.found > 0) {
-          toast.success(`Found ${summary.found} LinkedIn profiles`);
-          queryClient.invalidateQueries({ queryKey: ['contacts'] });
-        } else {
-          toast.info('No LinkedIn profiles found');
-        }
-      } else {
-        toast.error(data?.error || 'Failed to fetch LinkedIn profiles');
-      }
-    } catch (err) {
-      console.error('Error fetching LinkedIn profiles:', err);
-      toast.error('Failed to fetch LinkedIn profiles');
-    } finally {
-      setIsFetchingLinkedIn(false);
-    }
-  };
-
   const filteredContacts = contacts?.filter((contact) => {
     const search = searchTerm.toLowerCase();
     return (
@@ -213,9 +174,9 @@ export default function Contacts() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Contacts</h1>
-          <p className="text-muted-foreground">
-            Manage your conference contacts and relationships
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-primary">Relationships</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            The people you meet, what you discussed, and when to follow up.
           </p>
         </div>
         <div className="flex items-center gap-2">

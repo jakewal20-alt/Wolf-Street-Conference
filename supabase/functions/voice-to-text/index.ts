@@ -44,7 +44,7 @@ serve(async (req) => {
   try {
     const auth = await authenticate(req, corsHeaders);
     if (auth instanceof Response) return auth;
-    const { audio } = await req.json();
+    const { audio, format } = await req.json();
     const oversized = tooLarge(audio, 30000000, corsHeaders);
     if (oversized) return oversized;
     
@@ -60,8 +60,10 @@ serve(async (req) => {
     const binaryAudio = processBase64Chunks(audio);
     
     const formData = new FormData();
-    const blob = new Blob([binaryAudio], { type: 'audio/webm' });
-    formData.append('file', blob, 'audio.webm');
+    // Safari records mp4; everything else webm. Whisper goes by the file name.
+    const ext = format === 'mp4' ? 'mp4' : 'webm';
+    const blob = new Blob([binaryAudio], { type: `audio/${ext}` });
+    formData.append('file', blob, `audio.${ext}`);
     formData.append('model', 'whisper-1');
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {

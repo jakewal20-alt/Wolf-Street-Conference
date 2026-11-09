@@ -3,6 +3,9 @@ import App from "./App.tsx";
 import "./index.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
+import { installFriendlyFunctionErrors } from "@/lib/friendlyFunctionErrors";
+
+installFriendlyFunctionErrors();
 
 // A new service worker takes over right after a deploy, but the page that's
 // already open is still the old build. Reload once when that happens soon

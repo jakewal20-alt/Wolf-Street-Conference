@@ -51,7 +51,7 @@ export function LeadCard({ lead, conferenceId }: LeadCardProps) {
 
   return (
     <>
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="transition-colors hover:border-foreground/20">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
