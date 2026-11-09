@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { SUITE_THEME_KEY, SuiteThemeSync } from "@/lib/suiteTheme";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { installFriendlyFunctionErrors } from "@/lib/friendlyFunctionErrors";
 
@@ -22,7 +23,8 @@ if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <ThemeProvider defaultTheme="light" storageKey="wolf-street-theme">
+  <ThemeProvider defaultTheme="light" storageKey={SUITE_THEME_KEY} enableSystem={false}>
+    <SuiteThemeSync />
     <AppErrorBoundary>
       <App />
     </AppErrorBoundary>

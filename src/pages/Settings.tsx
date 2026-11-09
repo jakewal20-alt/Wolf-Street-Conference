@@ -1,4 +1,5 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useBarHasThemeSwitch } from "@/lib/suiteTheme";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const profileSchema = z.object({
 });
 
 export default function Settings() {
+  const barHasThemeSwitch = useBarHasThemeSwitch();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -190,10 +192,12 @@ export default function Settings() {
               <div className="space-y-1">
                 <Label className="text-base">Theme</Label>
                 <p className="text-sm text-muted-foreground">
-                  Switch between light and dark mode
+                  {barHasThemeSwitch
+                    ? "Use the sun/moon switch in the Wolf Street bar at the top. It applies to every Wolf Street app."
+                    : "Switch between light and dark mode"}
                 </p>
               </div>
-              <ThemeToggle />
+              {!barHasThemeSwitch && <ThemeToggle />}
             </div>
           </CardContent>
         </Card>

@@ -7,6 +7,8 @@ type WolfStreetBarProps = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLEle
   email?: string;
   note?: string;
   signout?: string;
+  /** Present: the bar shows the shared light/dark switch. */
+  "theme-toggle"?: string;
   "forecast-url"?: string;
   "samklr-url"?: string;
   "hallway-url"?: string;
