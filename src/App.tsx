@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import SharedConference from "./pages/SharedConference";
 import AdminUsers from "./pages/AdminUsers";
 import Today from "./pages/Today";
+import Floor from "./pages/Floor";
 import Sso from "./pages/Sso";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const PAGE_NAMES: Record<string, string> = {
   "/conferences": "Conferences",
   "/calendar": "Calendar",
   "/contacts": "Relationships",
+  "/floor": "Floor Mode",
   "/settings": "Settings",
   "/admin/users": "Users",
 };
@@ -96,6 +98,7 @@ const App = () => (
                         <PageTransition>
                           <Routes>
                             <Route path="/" element={<Today />} />
+                            <Route path="/floor" element={<Floor />} />
                             <Route path="/conferences" element={<Conferences />} />
                             <Route path="/calendar" element={<Calendar />} />
                             <Route path="/contacts" element={<Contacts />} />
