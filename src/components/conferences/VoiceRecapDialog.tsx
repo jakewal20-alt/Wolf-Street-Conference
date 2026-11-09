@@ -225,7 +225,7 @@ export function VoiceRecapDialog({ open, onOpenChange, conferenceId, leads }: Vo
           <div className="flex flex-col items-center gap-3 py-4">
             {isRecording && (
               <div className="flex items-center gap-2 text-destructive">
-                <span className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
+                <span className="w-3 h-3 rounded-full bg-destructive animate-pulse motion-reduce:animate-none" />
                 <span className="text-lg font-mono font-semibold">
                   {formatDuration(recordingDuration)}
                 </span>

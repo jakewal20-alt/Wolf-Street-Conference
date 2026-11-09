@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, MapPin, Users, Download, ExternalLink, CalendarDays, Trash2, Archive, ArchiveRestore, Pencil, ChevronDown, ChevronRight, Globe, FileText, ArrowRight, Link2, Sparkles } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Download, ExternalLink, CalendarDays, Trash2, Archive, ArchiveRestore, Pencil, ChevronDown, ChevronRight, Globe, FileText, ArrowRight, Link2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -232,12 +232,12 @@ export default function Conferences() {
         key={conference.id}
         className={`group cursor-pointer overflow-hidden rounded-lg border transition-colors duration-200 ${
           isSelected
-            ? "border-signal ring-2 ring-signal/20 bg-card"
+            ? "border-primary ring-2 ring-primary/15 bg-card"
             : status.isPast
               ? "opacity-65 hover:opacity-90 hover:shadow-sm"
               : status.isActive
                 ? "border-success/40 bg-success/5 hover:border-success/60"
-                : "border-border bg-card hover:border-signal/40"
+                : "border-border bg-card hover:border-primary/40"
         }`}
         onClick={() => setSelectedConferenceId(conference.id)}
       >
@@ -336,27 +336,27 @@ export default function Conferences() {
 
   return (
     <PageLayout>
-      <section className="relative overflow-hidden rounded-lg border border-border bg-card px-6 py-7 sm:px-8 sm:py-9">
-        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+      <header>
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-signal"><CalendarDays className="h-4 w-4" /> Field intelligence</div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Conferences</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">Prepare the room, capture every meaningful conversation, and leave with clear owners and next moves.</p>
+            <p className="mb-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">Field intelligence</p>
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-primary sm:text-4xl">Conferences</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Prepare the room, capture every meaningful conversation, and leave with clear owners and next moves.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setShowImportDialog(true)}><Download className="mr-2 h-4 w-4" /> Import calendar</Button>
             <Button onClick={() => setShowAddDialog(true)}><Plus className="mr-2 h-4 w-4" /> Add conference</Button>
           </div>
         </div>
-      </section>
+      </header>
 
-      <button onClick={() => setShowIngestDialog(true)} className="group flex w-full items-center gap-4 rounded-lg border border-dashed border-signal/40 bg-signal-muted/60 p-4 text-left transition-colors hover:border-signal hover:bg-signal-muted sm:p-5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-signal/20 bg-card text-signal"><Link2 className="h-5 w-5" /></div>
+      <button onClick={() => setShowIngestDialog(true)} className="flex w-full items-center gap-4 rounded-lg border border-dashed border-border bg-card p-4 text-left transition-colors hover:bg-muted/40 sm:p-5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-muted text-primary"><Link2 className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2"><p className="text-sm font-semibold text-foreground">Build a conference workspace from its website</p><Sparkles className="h-4 w-4 text-signal" /></div>
+          <p className="text-sm font-semibold text-foreground">Build a conference workspace from its website</p>
           <p className="mt-1 truncate text-xs text-muted-foreground">Paste a conference URL and let Hallway organize the details.</p>
         </div>
-        <ArrowRight className="h-4 w-4 text-signal transition-transform group-hover:translate-x-1" />
+        <ArrowRight className="h-4 w-4 text-muted-foreground" />
       </button>
 
       {/* Header + Actions */}

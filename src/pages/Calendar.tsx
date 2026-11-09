@@ -569,13 +569,11 @@ const Calendar = () => {
         {/* Main Calendar Area */}
         <div className="min-w-0 flex-1 space-y-6">
           {/* Header */}
-          <Card className="p-6 shadow-none">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+          <header>
+            <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h1 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-2">Calendar</h1>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  Track conferences and events
-                </p>
+                <h1 className="font-display text-3xl font-semibold tracking-tight text-primary sm:text-4xl">Calendar</h1>
+                <p className="mt-2 text-sm text-muted-foreground">Track conferences and events</p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-1 border rounded-md p-1 bg-card">
@@ -643,7 +641,7 @@ const Calendar = () => {
                 </div>
               </div>
             </div>
-          </Card>
+          </header>
 
           {/* Calendar Legend Bar */}
           <Card className="p-4 shadow-none">
