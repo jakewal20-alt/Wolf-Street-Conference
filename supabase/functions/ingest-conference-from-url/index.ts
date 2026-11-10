@@ -73,7 +73,10 @@ serve(async (req) => {
     // conference_id: "speakers only" mode. Reads a speakers/agenda page and adds
     // the named speakers to that existing conference; the conference itself
     // and its calendar entry are left untouched.
-    const { url, conference_id: targetConferenceId } = await req.json();
+    // page_text (speakers-only mode): text the user copied from the page in
+    // their own browser, for sites that refuse server fetches.
+    const { url, conference_id: targetConferenceId, page_text } = await req.json();
+    const pageText = typeof page_text === "string" && page_text.trim() ? page_text.slice(0, 60000) : null;
     console.log("=== Starting conference ingestion ===");
     console.log("Input URL:", url);
 
@@ -102,6 +105,12 @@ serve(async (req) => {
       const denied = await requireConferenceAccess(auth, targetConferenceId, corsHeaders);
       if (denied) return denied;
     }
+    if (pageText && !targetConferenceId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Pasted text can only add speakers to an existing conference" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
 
     // Pages we can't read, or that don't show the dates, are refused rather
@@ -117,7 +126,10 @@ serve(async (req) => {
     let htmlResponse;
     let html: string;
     
-    try {
+    if (pageText) {
+      html = pageText;
+      console.log("Using pasted page text, length:", html.length);
+    } else try {
       const fetched = await safeFetchText(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
