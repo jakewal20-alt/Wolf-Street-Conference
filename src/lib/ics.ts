@@ -11,6 +11,8 @@ export interface IcsEventInput {
   start_time?: string | null;
   end_time?: string | null;
   all_day?: boolean | null;
+  /** IANA zone the start/end times are in; without it they are the viewer's local time. */
+  time_zone?: string | null;
 }
 
 /** RFC 5545 TEXT escaping: backslash, semicolon, comma and newlines. */
@@ -86,8 +88,15 @@ export function buildIcs(events: IcsEventInput[], now: Date = new Date()): strin
       const end = endTime
         ? new Date(endDay.getFullYear(), endDay.getMonth(), endDay.getDate(), endTime[0], endTime[1])
         : new Date(start.getTime() + 60 * 60 * 1000);
-      lines.push(`DTSTART:${utcStamp(start)}`);
-      lines.push(`DTEND:${utcStamp(end > start ? end : new Date(start.getTime() + 60 * 60 * 1000))}`);
+      const finalEnd = end > start ? end : new Date(start.getTime() + 60 * 60 * 1000);
+      if (event.time_zone) {
+        // Wall-clock times in the meeting's own zone; calendar apps convert.
+        lines.push(`DTSTART;TZID=${event.time_zone}:${format(start, "yyyyMMdd'T'HHmmss")}`);
+        lines.push(`DTEND;TZID=${event.time_zone}:${format(finalEnd, "yyyyMMdd'T'HHmmss")}`);
+      } else {
+        lines.push(`DTSTART:${utcStamp(start)}`);
+        lines.push(`DTEND:${utcStamp(finalEnd)}`);
+      }
     } else {
       const lastDay = endDay >= startDay ? endDay : startDay;
       lines.push(`DTSTART;VALUE=DATE:${format(startDay, "yyyyMMdd")}`);

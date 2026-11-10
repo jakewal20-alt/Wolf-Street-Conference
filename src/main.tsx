@@ -23,7 +23,7 @@ if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <ThemeProvider defaultTheme="light" storageKey={SUITE_THEME_KEY} enableSystem={false}>
+  <ThemeProvider defaultTheme="system" storageKey={SUITE_THEME_KEY} enableSystem>
     <SuiteThemeSync />
     <AppErrorBoundary>
       <App />

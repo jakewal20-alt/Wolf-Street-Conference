@@ -2,13 +2,17 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 
 /**
- * Wolf Street theme contract (v1), shared by every suite app:
- * - localStorage "ws-theme" = "light" | "dark" (default light). next-themes
- *   stores Hallway's theme under the same key, so they stay in step.
+ * Wolf Street theme contract (v1.2), shared by every suite app:
+ * - With no choice made, follow the computer/browser (prefers-color-scheme), live.
+ * - An explicit choice lives in localStorage "ws-theme-pref" = "light" | "dark",
+ *   written only when someone clicks the bar's switch or arrives with ?ws_theme=.
+ *   next-themes stores Hallway's choice under the same key ("system" when unset).
  * - `?ws_theme=` on arrival (the bar adds it to cross-app links): save, apply, strip.
- * - window "wolfstreet:theme" events ({ detail: { theme } }) from the bar's switch.
+ * - window "wolfstreet:theme" events from the bar: apply only if a choice is saved;
+ *   otherwise next-themes is already following the OS, same as the bar.
+ * The old "ws-theme" key (v1.1) was written on every load, so it's ignored.
  */
-export const SUITE_THEME_KEY = "ws-theme";
+export const SUITE_THEME_KEY = "ws-theme-pref";
 
 /** Mount once inside ThemeProvider. */
 export function SuiteThemeSync() {
@@ -25,7 +29,10 @@ export function SuiteThemeSync() {
 
     const onTheme = (e: Event) => {
       const theme = (e as CustomEvent<{ theme?: string }>).detail?.theme;
-      if (theme === "light" || theme === "dark") setTheme(theme);
+      // The bar announces the OS-derived theme on load too; only an explicit
+      // choice (saved by the bar's click on this origin) becomes Hallway's.
+      const pref = localStorage.getItem(SUITE_THEME_KEY);
+      if ((theme === "light" || theme === "dark") && (pref === "light" || pref === "dark")) setTheme(theme);
     };
     window.addEventListener("wolfstreet:theme", onTheme);
     return () => window.removeEventListener("wolfstreet:theme", onTheme);

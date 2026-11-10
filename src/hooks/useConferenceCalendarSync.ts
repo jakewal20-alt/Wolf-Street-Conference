@@ -15,7 +15,7 @@ export function useConferenceCalendarSync() {
   // Everything that shows conferences or calendar events, so no screen keeps
   // stale data after a sync.
   const invalidateConferenceCalendar = () => {
-    for (const key of ["conferences", "calendar-events", "conference-linked-event-ids", "today-command-center"]) {
+    for (const key of ["conferences", "calendar-events", "conference-linked-event-ids", "conference-dates-by-event", "today-command-center"]) {
       queryClient.invalidateQueries({ queryKey: [key] });
     }
   };

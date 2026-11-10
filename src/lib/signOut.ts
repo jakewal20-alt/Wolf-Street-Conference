@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { confirmDialog } from "@/lib/confirmDialog";
 
 /**
  * Sign out (after confirming) and remove anything that could leak the previous user's data on a
@@ -9,9 +10,12 @@ import { supabase } from "@/integrations/supabase/client";
 export async function signOutAndClear(): Promise<void> {
   // Signing out ends every Wolf Street session on this account (Forecast,
   // SAMklr, Ghostwriter, the home page), so a stray click shouldn't do it.
-  if (!window.confirm("Sign out of all Wolf Street apps?\n\nThis signs you out of Hallway, Forecast, SAMklr, Ghostwriter and the Wolf Street home page.")) {
-    return;
-  }
+  const ok = await confirmDialog({
+    title: "Sign out of all Wolf Street apps?",
+    description: "This signs you out of Hallway, Forecast, SAMklr, Ghostwriter and the Wolf Street home page.",
+    confirmLabel: "Sign out",
+  });
+  if (!ok) return;
   try {
     await supabase.auth.signOut();
   } finally {

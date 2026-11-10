@@ -74,7 +74,7 @@ export default function Today() {
         supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
         // Upcoming events plus multi-day events already in progress (started earlier, end today or later).
         supabase.from("calendar_events").select("id,title,start_date,end_date,start_time,location,event_type").or(`start_date.gte.${today},end_date.gte.${today}`).order("start_date").order("start_time").limit(20),
-        supabase.from("conferences").select("id,name,start_date,end_date,location,conference_leads(count)").eq("archived", false).gte("end_date", today).order("start_date").limit(3),
+        supabase.from("conferences").select("id,name,start_date,end_date,location,calendar_event_id,conference_leads(count)").eq("archived", false).gte("end_date", today).order("start_date").limit(3),
         supabase.from("touchpoints").select("id", { count: "exact", head: true }).gte("date", today),
         supabase.from("contacts").select("id,name,org_name,next_follow_up_date,next_follow_up_note").not("next_follow_up_date", "is", null).lte("next_follow_up_date", weekEnd).order("next_follow_up_date").limit(20),
         supabase.from("conference_leads").select("id,contact_name,company,conference_id,next_follow_up_date,next_follow_up_note").not("next_follow_up_date", "is", null).lte("next_follow_up_date", weekEnd).order("next_follow_up_date").limit(20),
@@ -124,6 +124,18 @@ export default function Today() {
     const d = tryParseDate(e.start_date);
     return d && isMeeting(e) && startOfDay(d) <= weekEndDate && (startOfDay(d) >= startOfDay(now) || isHappeningToday(e));
   }).length;
+  // Conference calendar entries include travel days; show the conference's own start date
+  // so "Coming up" agrees with "Next conference", and note the travel day separately.
+  const conferenceStartByEvent: Record<string, string> = {};
+  for (const c of data?.conferences ?? []) {
+    if (c.calendar_event_id && c.start_date) conferenceStartByEvent[c.calendar_event_id] = String(c.start_date).split("T")[0];
+  }
+  const displayDate = (event: CalendarEvent) => conferenceStartByEvent[event.id] ?? event.start_date;
+  const travelDate = (event: CalendarEvent) => {
+    const confStart = conferenceStartByEvent[event.id];
+    const evStart = String(event.start_date).split("T")[0];
+    return confStart && evStart < confStart ? evStart : null;
+  };
   const nextConference = data?.conferences[0];
   const conferenceLeadCount = nextConference?.conference_leads?.[0]?.count || 0;
   const followUps = data?.followUps ?? [];
@@ -195,6 +207,24 @@ export default function Today() {
           </Button>
         </div>
       </header>
+
+      {/* At (or about to leave for) a conference: one tap into Floor Mode. */}
+      {nextConference && daysToConference !== null && daysToConference <= 2 && (
+        <button
+          type="button"
+          onClick={() => navigate(`/floor?conference=${nextConference.id}`)}
+          className="flex w-full items-center gap-4 rounded-2xl bg-primary px-5 py-5 text-left text-primary-foreground shadow-sm transition active:scale-[0.99]"
+        >
+          <ScanLine className="h-8 w-8 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-semibold">Open Floor Mode</span>
+            <span className="block truncate text-sm opacity-80">
+              {nextConference.name} {conferenceWhen}: scan cards, record recaps, see who to meet
+            </span>
+          </span>
+          <ArrowRight className="h-5 w-5 shrink-0" />
+        </button>
+      )}
 
       {/* Numbers */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -268,8 +298,8 @@ export default function Today() {
               {nextEvents.length ? nextEvents.map((event, index) => (
                 <button key={event.id} onClick={() => navigate("/calendar")} className="group flex w-full items-center gap-4 rounded-md p-2 text-left transition-colors hover:bg-accent">
                   <div className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded font-mono ${index === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                    <span className="text-[10px] font-semibold uppercase">{safeFormat(event.start_date, "MMM", "—")}</span>
-                    <span className="text-lg font-bold leading-none">{safeFormat(event.start_date, "d", "")}</span>
+                    <span className="text-[10px] font-semibold uppercase">{safeFormat(displayDate(event), "MMM", "—")}</span>
+                    <span className="text-lg font-bold leading-none">{safeFormat(displayDate(event), "d", "")}</span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -279,6 +309,7 @@ export default function Today() {
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{formatTime(event.start_time)}</span>
                       {event.location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{event.location}</span>}
+                      {travelDate(event) && <span>✈️ Travel {safeFormat(travelDate(event) as string, "MMM d", "")}</span>}
                     </div>
                   </div>
                   <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-1" />

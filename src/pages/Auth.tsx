@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight } from "lucide-react";
 import { WOLFSTREET_HOME_SSO_PATH } from "@/lib/suite";
+import { WolfStreetIntro } from "@/components/WolfStreetIntro";
+
+const WOLFSTREET_MEDIA = "https://wolfstreet-production.up.railway.app/media";
 
 
 export default function Auth() {
@@ -262,19 +265,46 @@ const PRIMARY =
 
 /** The one Wolf Street sign-in look: logo centred on the logo's own navy. */
 function SuiteShell({ children }: { children: React.ReactNode }) {
+  // The Wolf Street home page's footage loop, still for anyone who asks for reduced motion.
+  const video = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) video.current?.pause();
+  }, []);
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-signin px-4 py-8">
+    <div className="relative isolate flex min-h-screen flex-col items-center justify-center overflow-hidden bg-signin px-4 py-8">
+      <video
+        ref={video}
+        className="signin-video"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        poster={`${WOLFSTREET_MEDIA}/banner-poster.jpg`}
+        aria-hidden="true"
+      >
+        <source src={`${WOLFSTREET_MEDIA}/banner.webm`} type="video/webm" />
+        <source src={`${WOLFSTREET_MEDIA}/banner.mp4`} type="video/mp4" />
+      </video>
+      <span className="signin-shade" aria-hidden="true" />
+      <span className="signin-corners" aria-hidden="true" />
+      <WolfStreetIntro />
+      {/* Transparent mark + live wordmark (the logo PNG has its own navy square, which shows over the video). */}
       <img
-        src="/branding/wolfstreet-logo.png"
-        alt="Wolf Street"
-        width={560}
-        height={560}
-        className="h-32 w-32 sm:h-40 sm:w-40"
+        src="https://wolfstreet-production.up.railway.app/brand/wolfstreet-mark.svg"
+        alt=""
+        width={64}
+        height={64}
+        className="h-16 w-16 sm:h-20 sm:w-20"
       />
-      <p className="-mt-1 mb-6 text-center text-xs font-medium uppercase tracking-[0.2em] text-inverse-muted">
+      <p className="signin-wordmark mt-3" aria-label="Wolf Street">
+        <span>WOLF</span>
+        <span>STREET</span>
+      </p>
+      <p className="mb-6 mt-4 text-center text-xs font-medium uppercase tracking-[0.2em] text-inverse-muted">
         Find the money. Meet the people. Win the work.
       </p>
-      <div className="w-full max-w-sm rounded border border-signin-foreground/10 bg-signin-foreground/[0.03] p-6 sm:p-8">{children}</div>
+      <div className="w-full max-w-sm rounded border border-signin-foreground/15 bg-signin/85 p-6 shadow-2xl backdrop-blur-md sm:p-8">{children}</div>
     </div>
   );
 }

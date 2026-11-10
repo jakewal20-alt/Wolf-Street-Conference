@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { confirmDialog } from "@/lib/confirmDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -432,10 +433,14 @@ export default function AdminUsers() {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => {
-                            if (confirm(`Remove ${user.email} from ${companyName(user.org_id) ?? "this company"}? Their Wolf Street login stays; they lose Hallway access. Records they created stay with the company.`)) {
-                              removeUserMutation.mutate(user.id);
-                            }
+                          onClick={async () => {
+                            const ok = await confirmDialog({
+                              title: `Remove ${user.email} from ${companyName(user.org_id) ?? "this company"}?`,
+                              description: "Their Wolf Street login stays; they lose Hallway access. Records they created stay with the company.",
+                              confirmLabel: "Remove",
+                              destructive: true,
+                            });
+                            if (ok) removeUserMutation.mutate(user.id);
                           }}
                           disabled={removeUserMutation.isPending}
                         >

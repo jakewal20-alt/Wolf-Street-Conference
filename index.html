@@ -8,11 +8,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Hallway" />
-    <link rel="icon" href="/favicon.png" type="image/png" />
-    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <!-- The one Wolf Street wolf, served by the Wolf Street home so changes reach every app. -->
+    <link rel="icon" href="https://wolfstreet-production.up.railway.app/brand/wolfstreet-favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="https://wolfstreet-production.up.railway.app/brand/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="https://wolfstreet-production.up.railway.app/brand/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=Saira:wdth,wght@125,800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <title>Hallway — Conference &amp; Relationship Intelligence · Wolf Street</title>
     <meta name="description" content="Hallway, part of the Wolf Street suite: the conference and relationship workspace for business development teams. Capture every signal, coordinate every follow-up, and enter every opportunity informed." />
     <meta name="author" content="Wolf Street" />
@@ -24,6 +26,17 @@
 
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="format-detection" content="telephone=no" />
+    <script>
+      // Wolf Street theme (v1.2) before first paint: saved choice, else the computer's setting.
+      (function () {
+        try {
+          var p = localStorage.getItem("ws-theme-pref");
+          var dark = p === "dark" || ((p !== "light") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.add(dark ? "dark" : "light");
+          document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>

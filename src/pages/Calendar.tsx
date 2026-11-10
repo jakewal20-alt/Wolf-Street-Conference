@@ -23,6 +23,7 @@ import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EventTypeSelector } from "@/components/calendar/EventTypeSelector";
+import { formatEventTime, localTimeZone, normalizeTime, timeZoneOptions } from "@/lib/eventTime";
 import { ColorPicker } from "@/components/calendar/ColorPicker";
 import { IconSelector } from "@/components/calendar/IconSelector";
 import { CalendarLegend } from "@/components/calendar/CalendarLegend";
@@ -44,7 +45,21 @@ interface CalendarEvent {
   icon_name: string | null;
   invite_email: string | null;
   registration_url: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  time_zone?: string | null;
 }
+
+// Until the time_zone migration runs, writes that include it fail with
+// "column not found"; retry without it so saving still works.
+const isMissingTimeZoneColumn = (error: { code?: string; message?: string } | null) =>
+  !!error && (error.code === "PGRST204" || error.code === "42703") && /time_zone/.test(error.message ?? "");
+
+/** The event's time line for a given day ("2:00 PM – 3:00 PM EST"), or null if all day. */
+const eventTimeLabel = (event: CalendarEvent, day?: Date) =>
+  event.all_day === false || event.start_time
+    ? formatEventTime(event.start_time, event.end_time, event.time_zone, day)
+    : null;
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -58,6 +73,9 @@ const Calendar = () => {
   const [customEventInviteEmail, setCustomEventInviteEmail] = useState("");
   const [customEventStartDate, setCustomEventStartDate] = useState<Date | null>(null);
   const [customEventEndDate, setCustomEventEndDate] = useState<Date | null>(null);
+  const [customStartTime, setCustomStartTime] = useState("");
+  const [customEndTime, setCustomEndTime] = useState("");
+  const [customTimeZone, setCustomTimeZone] = useState(localTimeZone);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showDayEventsDialog, setShowDayEventsDialog] = useState(false);
@@ -107,6 +125,38 @@ const Calendar = () => {
       return (data || []).map(c => c.calendar_event_id).filter(Boolean) as string[];
     },
   });
+
+  // The real conference dates for each linked calendar event. A conference's
+  // calendar entry can include travel days around it, so those days are labelled
+  // "Travel" instead of looking like conference days.
+  const { data: conferenceDatesByEvent = {} } = useQuery({
+    queryKey: ["conference-dates-by-event", conferenceLinkedEventIds],
+    enabled: conferenceLinkedEventIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("conferences")
+        .select("calendar_event_id, start_date, end_date")
+        .not("calendar_event_id", "is", null);
+      if (error) throw error;
+      const map: Record<string, { start: string; end: string }> = {};
+      for (const c of data || []) {
+        if (!c.calendar_event_id || !c.start_date) continue;
+        const start = String(c.start_date).split("T")[0];
+        map[c.calendar_event_id] = { start, end: c.end_date ? String(c.end_date).split("T")[0] : start };
+      }
+      return map;
+    },
+  });
+
+  const isTravelDay = (event: CalendarEvent, day: Date) => {
+    const conf = conferenceDatesByEvent[event.id];
+    if (!conf) return false;
+    const d = format(day, "yyyy-MM-dd");
+    return d < conf.start || d > conf.end;
+  };
+
+  const dayTitle = (event: CalendarEvent, day: Date) =>
+    isTravelDay(event, day) ? `✈️ Travel · ${event.title}` : event.title;
 
   const { data: calendarEvents = [], isLoading: eventsLoading } = useQuery({
     queryKey: ["calendar-events", conferenceLinkedEventIds],
@@ -222,16 +272,24 @@ const Calendar = () => {
       end_date: string | null;
       location: string;
       invite_email: string | null;
+      start_time: string | null;
+      end_time: string | null;
+      all_day: boolean;
+      time_zone: string | null;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
+      let { error } = await supabase
         .from("calendar_events")
-        .insert([{
-          ...newEvent,
-          user_id: user.id,
-        }]);
+        .insert([{ ...newEvent, user_id: user.id }]);
+
+      if (isMissingTimeZoneColumn(error)) {
+        const { time_zone: _tz, ...withoutZone } = newEvent;
+        ({ error } = await supabase
+          .from("calendar_events")
+          .insert([{ ...withoutZone, user_id: user.id }]));
+      }
 
       if (error) throw error;
     },
@@ -249,6 +307,8 @@ const Calendar = () => {
       setCustomEventType("travel");
       setCustomEventStartDate(null);
       setCustomEventEndDate(null);
+      setCustomStartTime("");
+      setCustomEndTime("");
     },
     onError: () => {
       toast({
@@ -274,12 +334,24 @@ const Calendar = () => {
       icon_name: string | null;
       invite_email: string | null;
       registration_url: string | null;
+      start_time: string | null;
+      end_time: string | null;
+      all_day: boolean;
+      time_zone: string | null;
     }) => {
       const { id, ...updates } = updatedEvent;
-      const { error } = await supabase
+      let { error } = await supabase
         .from("calendar_events")
         .update(updates)
         .eq("id", id);
+
+      if (isMissingTimeZoneColumn(error)) {
+        const { time_zone: _tz, ...withoutZone } = updates;
+        ({ error } = await supabase
+          .from("calendar_events")
+          .update(withoutZone)
+          .eq("id", id));
+      }
 
       if (error) throw error;
     },
@@ -411,6 +483,14 @@ const Calendar = () => {
     const startDate = customEventStartDate || quickAddDate;
     if (!startDate) return;
 
+    const startTime = normalizeTime(customStartTime);
+    const endTime = startTime ? normalizeTime(customEndTime) : null;
+    const sameDay = !customEventEndDate || format(customEventEndDate, "yyyy-MM-dd") === format(startDate, "yyyy-MM-dd");
+    if (startTime && endTime && sameDay && endTime <= startTime) {
+      toast({ title: "Check the times", description: "The end time must be after the start time.", variant: "destructive" });
+      return;
+    }
+
     createCalendarEventMutation.mutate({
       title: newEventTitle,
       description: customEventDescription,
@@ -419,6 +499,10 @@ const Calendar = () => {
       end_date: customEventEndDate ? format(customEventEndDate, "yyyy-MM-dd") : null,
       location: customEventLocation,
       invite_email: customEventInviteEmail || null,
+      start_time: startTime,
+      end_time: endTime,
+      all_day: !startTime,
+      time_zone: startTime ? customTimeZone : null,
     });
   };
 
@@ -543,7 +627,10 @@ const Calendar = () => {
                         <div className="flex items-center justify-between">
                           <div className="text-muted-foreground flex items-center gap-1">
                             <CalendarIcon className="h-3 w-3" />
-                            {safeFormat(event.start_date, "MMM d, yyyy")}
+                            {safeFormat(conferenceDatesByEvent[event.id]?.start ?? event.start_date, "MMM d, yyyy")}
+                            {conferenceDatesByEvent[event.id] && String(event.start_date).split("T")[0] < conferenceDatesByEvent[event.id].start && (
+                              <span className="ml-1">· ✈️ {safeFormat(event.start_date, "MMM d")}</span>
+                            )}
                           </div>
                           {renderAttendeeAvatars(event.id, "sm")}
                         </div>
@@ -739,10 +826,13 @@ const Calendar = () => {
                                 </div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <h3 className="font-semibold text-base">
-                                    {event.title}
+                                    {dayTitle(event, currentDate)}
                                   </h3>
                                   {renderAttendeeAvatars(event.id, "md")}
                                 </div>
+                                {eventTimeLabel(event, currentDate) && (
+                                  <p className="text-sm font-medium mb-1">{eventTimeLabel(event, currentDate)}</p>
+                                )}
                                 {event.description && (
                                   <p className="text-sm text-muted-foreground mb-1">
                                     {event.description}
@@ -821,8 +911,11 @@ const Calendar = () => {
                               <div className="flex items-center gap-1 mb-1">
                                 <EventIcon className="h-3 w-3" style={{ color: eventColor }} />
                                 <Badge variant="secondary" className="text-[10px] px-1 py-0">{eventLabel}</Badge>
-                                <div className="font-medium truncate flex-1">{event.title}</div>
+                                <div className="font-medium truncate flex-1">{dayTitle(event, day)}</div>
                               </div>
+                              {eventTimeLabel(event, day) && (
+                                <div className="mb-1 font-medium">{eventTimeLabel(event, day)}</div>
+                              )}
                               <div className="flex items-center justify-between">
                                 {event.location ? (
                                   <div className="text-muted-foreground truncate">{event.location}</div>
@@ -961,7 +1054,7 @@ const Calendar = () => {
                                         }}
                                       >
                                         <EventIcon className="h-3 w-3 flex-shrink-0" />
-                                        <span className="truncate flex-1">{event.title}</span>
+                                        <span className="truncate flex-1">{dayTitle(event, day)}</span>
                                         {renderAttendeeAvatars(event.id, "sm")}
                                       </div>
                                     );
@@ -1040,9 +1133,12 @@ const Calendar = () => {
                             <Badge variant="secondary" className="text-xs">{eventLabel}</Badge>
                           </div>
                           <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-sm">{event.title}</h4>
+                            <h4 className="font-semibold text-sm">{dayTitle(event, selectedDay)}</h4>
                             {renderAttendeeAvatars(event.id, "md")}
                           </div>
+                          {eventTimeLabel(event, selectedDay) && (
+                            <p className="text-xs font-medium mt-0.5">{eventTimeLabel(event, selectedDay)}</p>
+                          )}
                           {event.location && (
                             <p className="text-xs text-muted-foreground mt-0.5">{event.location}</p>
                           )}
@@ -1184,6 +1280,43 @@ const Calendar = () => {
                 </Popover>
               </div>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="start-time">Start Time{customEventType === "meeting" ? "" : " (Optional)"}</Label>
+                <Input
+                  id="start-time"
+                  type="time"
+                  value={customStartTime}
+                  onChange={(e) => setCustomStartTime(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end-time">End Time</Label>
+                <Input
+                  id="end-time"
+                  type="time"
+                  value={customEndTime}
+                  disabled={!customStartTime}
+                  onChange={(e) => setCustomEndTime(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="time-zone">Time Zone</Label>
+                <Select value={customTimeZone} onValueChange={setCustomTimeZone} disabled={!customStartTime}>
+                  <SelectTrigger id="time-zone">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeZoneOptions(customTimeZone).map((z) => (
+                      <SelectItem key={z.value} value={z.value}>{z.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              {customStartTime ? "Times are in the time zone you pick." : "Leave the start time blank for an all-day event."}
+            </p>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -1202,7 +1335,7 @@ const Calendar = () => {
             </Button>
             <Button
               onClick={handleQuickAdd}
-              disabled={!newEventTitle || createCalendarEventMutation.isPending}
+              disabled={!newEventTitle || (customEventType === "meeting" && !customStartTime) || createCalendarEventMutation.isPending}
             >
               {createCalendarEventMutation.isPending ? "Creating..." : "Create Event"}
             </Button>
@@ -1384,6 +1517,45 @@ const Calendar = () => {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-start-time">Start Time</Label>
+                    <Input
+                      id="edit-start-time"
+                      type="time"
+                      value={selectedEvent.start_time?.slice(0, 5) || ""}
+                      onChange={(e) => setSelectedEvent({ ...selectedEvent, start_time: e.target.value || null })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-end-time">End Time</Label>
+                    <Input
+                      id="edit-end-time"
+                      type="time"
+                      value={selectedEvent.end_time?.slice(0, 5) || ""}
+                      disabled={!selectedEvent.start_time}
+                      onChange={(e) => setSelectedEvent({ ...selectedEvent, end_time: e.target.value || null })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-time-zone">Time Zone</Label>
+                    <Select
+                      value={selectedEvent.time_zone || localTimeZone()}
+                      onValueChange={(value) => setSelectedEvent({ ...selectedEvent, time_zone: value })}
+                      disabled={!selectedEvent.start_time}
+                    >
+                      <SelectTrigger id="edit-time-zone">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeZoneOptions(selectedEvent.time_zone || localTimeZone()).map((z) => (
+                          <SelectItem key={z.value} value={z.value}>{z.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="edit-description">Description</Label>
                   <Textarea
@@ -1436,6 +1608,10 @@ const Calendar = () => {
                       icon_name: selectedEvent.icon_name,
                       invite_email: selectedEvent.invite_email,
                       registration_url: selectedEvent.registration_url,
+                      start_time: normalizeTime(selectedEvent.start_time || ""),
+                      end_time: selectedEvent.start_time ? normalizeTime(selectedEvent.end_time || "") : null,
+                      all_day: !normalizeTime(selectedEvent.start_time || ""),
+                      time_zone: selectedEvent.start_time ? (selectedEvent.time_zone || localTimeZone()) : null,
                     });
                   }
                 }}
