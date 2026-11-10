@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { format, startOfDay } from "date-fns";
-import { Building2, Clock3, Mic2, Printer, ScanLine, UserRound, Users } from "lucide-react";
+import { Building2, Clock3, Landmark, Mic2, Printer, ScanLine, UserRound, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +11,7 @@ import { VoiceRecapDialog } from "@/components/conferences/VoiceRecapDialog";
 import { ForecastPursuits } from "@/components/conferences/ForecastPursuits";
 import { ForecastPeople } from "@/components/conferences/ForecastPeople";
 import { ImportSpeakers } from "@/components/conferences/ImportSpeakers";
+import { useBudgetMatches } from "@/components/conferences/useBudgetMatches";
 import { safeFormat, tryParseDate } from "@/utils/dateHelpers";
 import { cn } from "@/lib/utils";
 
@@ -130,11 +131,14 @@ export default function Floor() {
   const capturedToday = leads.filter((l) => l.created_at?.slice(0, 10) === today);
   const metNames = new Set(leads.map((l) => l.contact_name.trim().toLowerCase()));
 
-  // Speakers you haven't met yet, government first.
+  // Speakers in an office tied to the budget lines on your Forecast programs.
+  const budgetMatches = useBudgetMatches(conference?.id, speakers);
+
+  // Speakers you haven't met yet: those tied to your budget lines first, then government.
   const targets = speakers
     .filter((s) => !metNames.has(s.name.trim().toLowerCase()))
-    .map((s) => ({ ...s, government: GOVERNMENT_ORG.test(`${s.organization ?? ""} ${s.title ?? ""}`) }))
-    .sort((a, b) => Number(b.government) - Number(a.government) || a.name.localeCompare(b.name));
+    .map((s) => ({ ...s, government: GOVERNMENT_ORG.test(`${s.organization ?? ""} ${s.title ?? ""}`), budget: budgetMatches.get(s.id) }))
+    .sort((a, b) => Number(!!b.budget) - Number(!!a.budget) || Number(b.government) - Number(a.government) || a.name.localeCompare(b.name));
 
   // Your contacts who work where a speaker works: an easy introduction.
   const speakerOrgs = new Map<string, string>();
@@ -285,11 +289,21 @@ export default function Floor() {
                 <li key={s.id} className="p-3 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{s.name}</span>
-                    {s.government && (
+                    {s.budget ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
+                        <Landmark className="h-3 w-3" /> Your budget line
+                      </span>
+                    ) : s.government && (
                       <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Government</span>
                     )}
                   </div>
                   <div className="text-muted-foreground">{[s.title, s.organization].filter(Boolean).join(", ")}</div>
+                  {s.budget && (
+                    <div className="mt-0.5 text-xs text-primary">
+                      {s.budget.office}{s.budget.officeParent ? ` (under ${s.budget.officeParent})` : ""} ·{" "}
+                      {s.budget.yourLines.map((l) => [l.line, l.programs.length ? `for ${l.programs.join(", ")}` : null].filter(Boolean).join(" ")).join("; ")}
+                    </div>
+                  )}
                   {(s.session_title || s.session_time) && (
                     <div className="mt-0.5 text-xs">{[s.session_time, s.session_title].filter(Boolean).join(" · ")}</div>
                   )}

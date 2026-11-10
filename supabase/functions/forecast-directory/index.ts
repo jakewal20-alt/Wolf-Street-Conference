@@ -9,6 +9,12 @@
  * and returns { configured, available, people: [{ id, name, title, role, office, officeParent,
  *   email, phone, publishedOn, publishedAt, lastSeen, stale, lines, url }] }.
  *
+ *
+ *   POST /functions/v1/forecast-directory  { speakers: [{ id, name, title, organization }] }
+ * asks POST <FORECAST_URL>/api/suite/directory/match and returns { configured, available,
+ *   matches: [{ speakerId, office, officeParent, via, lines, yourLines: [{ line, title, role, programs }] }] }:
+ * the speakers who sit in an office tied to budget lines on the company's Forecast programs (Floor Mode).
+ *
  * The directory holds only official-capacity contacts published on SAM.gov notices, DSIP topics,
  * Grants.gov and conference agendas. Email and phone are shown as published, with the source and date.
  * Forecast's data belongs to one company (FORECAST_ORG_SLUG, default "mavrc"); only its members get it.
@@ -18,7 +24,7 @@ import { authenticate } from "../_shared/auth.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 function json(body: unknown, status = 200): Response {
@@ -53,18 +59,20 @@ const clean = (v: unknown, max = 80) => (typeof v === "string" ? v.trim().slice(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  if (req.method !== "GET") return json({ error: "Method not allowed" }, 405);
+  if (req.method !== "GET" && req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   const auth = await authenticate(req, corsHeaders);
   if (auth instanceof Response) return auth;
 
   if (!(await inForecastCompany(auth.admin, auth.user.id))) {
-    return json({ configured: false, people: [] });
+    return json({ configured: false, people: [], matches: [] });
   }
 
   const base = (Deno.env.get("FORECAST_URL") ?? "").replace(/\/$/, "");
   const token = Deno.env.get("FORECAST_SUITE_TOKEN") ?? "";
-  if (!base || token.length < 24) return json({ configured: false, people: [] });
+  if (!base || token.length < 24) return json({ configured: false, people: [], matches: [] });
+
+  if (req.method === "POST") return matchSpeakers(req, base, token);
 
   const url = new URL(req.url);
   const params = new URLSearchParams({ limit: "50" });
@@ -110,3 +118,55 @@ Deno.serve(async (req) => {
     return json({ configured: true, available: false, people: [] });
   }
 });
+
+/** Floor Mode: which of a conference's speakers sit in an office tied to the company's budget lines. */
+async function matchSpeakers(req: Request, base: string, token: string): Promise<Response> {
+  let body: { speakers?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "Send { speakers: [...] }" }, 400);
+  }
+  const speakers = (Array.isArray(body?.speakers) ? body.speakers : []).slice(0, 300).map((s: Record<string, unknown>) => ({
+    id: clean(s?.id, 64),
+    name: clean(s?.name, 120),
+    title: clean(s?.title, 200),
+    organization: clean(s?.organization, 200),
+  })).filter((s: { id: string; name: string }) => s.id && s.name);
+  if (speakers.length === 0) return json({ configured: true, available: true, matches: [] });
+
+  try {
+    const res = await fetch(`${base}/api/suite/directory/match`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ speakers: speakers.map(({ name, title, organization }: Record<string, string>) => ({ name, title, organization })) }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) {
+      console.error("[forecast-directory] match: Forecast returned", res.status);
+      return json({ configured: true, available: false, matches: [] });
+    }
+    const out = await res.json();
+    const matches = (Array.isArray(out?.speakers) ? out.speakers : []).map((m: Record<string, any>) => {
+      const speaker = Number.isInteger(m.index) ? speakers[m.index] : undefined;
+      if (!speaker) return null;
+      return {
+        speakerId: speaker.id,
+        office: str(m.office?.name) ?? "",
+        officeParent: str(m.office?.parent?.name),
+        via: m.via === "directory" ? "directory" : "agenda",
+        lines: Number.isFinite(m.lines) ? Number(m.lines) : 0,
+        yourLines: (Array.isArray(m.yourLines) ? m.yourLines : []).slice(0, 6).map((l: Record<string, unknown>) => ({
+          line: str(l.line, 20) ?? "",
+          title: str(l.title, 160),
+          role: str(l.role, 20),
+          programs: (Array.isArray(l.programs) ? l.programs : []).slice(0, 4).map((x: unknown) => str(x, 120)).filter(Boolean),
+        })).filter((l: { line: string }) => l.line),
+      };
+    }).filter((m: { office: string } | null) => m && m.office);
+    return json({ configured: true, available: true, matches });
+  } catch (e) {
+    console.error("[forecast-directory] match failed:", e instanceof Error ? e.message : e);
+    return json({ configured: true, available: false, matches: [] });
+  }
+}
