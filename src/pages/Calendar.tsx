@@ -627,7 +627,10 @@ const Calendar = () => {
                         <div className="flex items-center justify-between">
                           <div className="text-muted-foreground flex items-center gap-1">
                             <CalendarIcon className="h-3 w-3" />
-                            {safeFormat(event.start_date, "MMM d, yyyy")}
+                            {safeFormat(conferenceDatesByEvent[event.id]?.start ?? event.start_date, "MMM d, yyyy")}
+                            {conferenceDatesByEvent[event.id] && String(event.start_date).split("T")[0] < conferenceDatesByEvent[event.id].start && (
+                              <span className="ml-1">· ✈️ {safeFormat(event.start_date, "MMM d")}</span>
+                            )}
                           </div>
                           {renderAttendeeAvatars(event.id, "sm")}
                         </div>
