@@ -284,7 +284,9 @@ Example good description:
             }
           ],
           tool_choice: { type: "function", function: { name: "extract_conference_data" } },
-          max_completion_tokens: 8000
+          max_completion_tokens: 8000,
+          // Speaker-only imports just read names off the page; low effort keeps it fast.
+          ...(targetConferenceId ? { reasoning_effort: "low" } : {}),
         }),
       });
     } catch (aiError) {

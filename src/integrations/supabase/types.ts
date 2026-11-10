@@ -927,6 +927,44 @@ export type Database = {
           },
         ]
       }
+      conference_exhibitors: {
+        Row: {
+          booth: string | null
+          conference_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          source_url: string | null
+        }
+        Insert: {
+          booth?: string | null
+          conference_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          source_url?: string | null
+        }
+        Update: {
+          booth?: string | null
+          conference_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conference_exhibitors_conference_id_fkey"
+            columns: ["conference_id"]
+            isOneToOne: false
+            referencedRelation: "conferences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conference_share_links: {
         Row: {
           id: string

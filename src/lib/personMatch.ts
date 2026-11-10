@@ -31,3 +31,58 @@ export function indexByName<T>(items: T[], getName: (item: T) => string | null |
   }
   return map;
 }
+
+const ORG_NOISE = /\b(inc|incorporated|llc|l\.l\.c|corp|corporation|company|co|the|ltd|limited|plc|gmbh|group|holdings|usa|us|na)\b/g;
+
+function orgKey(raw: string): string {
+  return raw
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(ORG_NOISE, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Keys an organization is known by: "Aechelon Technology (Shield AI)" ->
+ * ["aechelon technology", "shield ai"]; "ARA - Applied Research Associates
+ * Inc." -> ["ara applied research associates", "ara", "applied research associates"].
+ */
+export function orgKeys(name: string | null | undefined): string[] {
+  if (!name) return [];
+  const keys = new Set<string>();
+  const add = (s: string) => {
+    const k = orgKey(s);
+    if (k.length >= 2) keys.add(k);
+  };
+  add(name.replace(/\(.*?\)/g, " "));
+  for (const m of name.matchAll(/\(([^)]+)\)/g)) add(m[1]);
+  const parts = name.replace(/\(.*?\)/g, " ").split(/\s+[-–—|/]\s+/);
+  if (parts.length > 1) parts.forEach(add);
+  return [...keys];
+}
+
+// One-word names too common to match inside a longer name on their own.
+const GENERIC_ORG_WORDS = new Set([
+  "american", "national", "federal", "global", "international", "united", "general", "advanced", "applied",
+  "systems", "technologies", "technology", "solutions", "services", "defense", "security", "government",
+  "military", "training", "simulation", "aerospace", "engineering", "consulting", "research", "associates",
+]);
+
+/** True when one key is the other, or contains it as whole words (and isn't too generic). */
+export function keysMatch(a: string, b: string): boolean {
+  if (a === b) return a.length >= 3;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  if (short.split(" ").length < 2 && (short.length < 6 || GENERIC_ORG_WORDS.has(short))) return false;
+  return ` ${long} `.includes(` ${short} `);
+}
+
+/** Do these two organization names refer to the same company? */
+export function sameOrg(a: string | null | undefined, b: string | null | undefined): boolean {
+  const ka = orgKeys(a);
+  const kb = orgKeys(b);
+  return ka.some((x) => kb.some((y) => keysMatch(x, y)));
+}

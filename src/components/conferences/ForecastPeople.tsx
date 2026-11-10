@@ -19,12 +19,10 @@ type LeadLike = { id: string; contact_name: string; company: string | null };
 
 const MAX_LOOK_FOR = 8;
 
-/**
- * People Forecast tracks on your pursuits, matched against this conference:
- * who is speaking here, who you've already met here, and who to look for.
- * Hidden when Forecast isn't connected or tracks nobody.
- */
-export function ForecastPeople({ speakers, leads }: { speakers: SpeakerLike[]; leads: LeadLike[] }) {
+const NO_PEOPLE: ForecastPerson[] = [];
+
+/** People Forecast tracks on your pursuits; empty when Forecast isn't connected. */
+export function useForecastPeople(): ForecastPerson[] {
   const { data } = useQuery({
     queryKey: ["forecast-people"],
     staleTime: 10 * 60_000,
@@ -35,8 +33,16 @@ export function ForecastPeople({ speakers, leads }: { speakers: SpeakerLike[]; l
       return data as { people: ForecastPerson[] };
     },
   });
+  return data?.people ?? NO_PEOPLE;
+}
 
-  const people = data?.people ?? [];
+/**
+ * People Forecast tracks on your pursuits, matched against this conference:
+ * who is speaking here, who you've already met here, and who to look for.
+ * Hidden when Forecast isn't connected or tracks nobody.
+ */
+export function ForecastPeople({ speakers, leads }: { speakers: SpeakerLike[]; leads: LeadLike[] }) {
+  const people = useForecastPeople();
   if (people.length === 0) return null;
 
   const speakerByName = indexByName(speakers, (s) => s.name);
