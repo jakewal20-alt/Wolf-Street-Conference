@@ -8,8 +8,8 @@
 --   * whole-company visibility inside a company
 --   * the platform admin creates companies and invites their first admin;
 --     company admins invite and approve people into their own company only
---   * existing data belongs to MAVRC; only admins and people who own
---     Hallway records keep access (re-invite anyone else)
+--   * existing data belongs to MAVRC; every approved person joins MAVRC
+--     and keeps access (unapproved accounts need an invite)
 --
 -- Also closes these holes:
 --   * "shared_*" policies let ANY signed-in Wolf Street account (including
@@ -160,10 +160,10 @@ DROP TRIGGER IF EXISTS protect_admin_fields_trigger ON public.profiles;
 DROP FUNCTION IF EXISTS public.protect_admin_fields();
 
 -- First run only (skipped once anyone has a company, so people removed later
--- aren't put back). Only real Hallway users join MAVRC: admins and anyone
--- who owns Hallway records. Every other profile (the old trigger approved
--- every new suite account) loses Hallway access until an admin invites them;
--- inviting an existing account adds it immediately.
+-- aren't put back). Every currently approved profile joins MAVRC (Jake's
+-- call, Nov 9: the approved list was reviewed and is all MAVRC). Unapproved
+-- profiles stay out until an admin invites them; inviting an existing
+-- account adds it immediately.
 DO $$
 DECLARE mavrc uuid := (SELECT id FROM public.organizations WHERE slug = 'mavrc');
 BEGIN
@@ -173,14 +173,7 @@ BEGIN
 
   UPDATE public.profiles p
   SET org_id = mavrc
-  WHERE p.is_approved = true AND (
-       p.is_admin = true
-    OR EXISTS (SELECT 1 FROM public.conferences x WHERE x.created_by = p.id)
-    OR EXISTS (SELECT 1 FROM public.conference_leads x WHERE x.created_by = p.id)
-    OR EXISTS (SELECT 1 FROM public.calendar_events x WHERE x.user_id = p.id)
-    OR EXISTS (SELECT 1 FROM public.contacts x WHERE x.user_id = p.id)
-    OR EXISTS (SELECT 1 FROM public.touchpoints x WHERE x.user_id = p.id)
-    OR EXISTS (SELECT 1 FROM public.conference_collaborators x WHERE x.user_id = p.id));
+  WHERE p.is_approved = true;
 
   UPDATE public.profiles
   SET is_approved = false, is_admin = false
