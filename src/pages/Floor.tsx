@@ -10,6 +10,7 @@ import { UploadBusinessCardDialog } from "@/components/conferences/UploadBusines
 import { VoiceRecapDialog } from "@/components/conferences/VoiceRecapDialog";
 import { ForecastPursuits } from "@/components/conferences/ForecastPursuits";
 import { ForecastPeople } from "@/components/conferences/ForecastPeople";
+import { ImportSpeakers } from "@/components/conferences/ImportSpeakers";
 import { safeFormat, tryParseDate } from "@/utils/dateHelpers";
 import { cn } from "@/lib/utils";
 
@@ -270,11 +271,14 @@ export default function Floor() {
           {speakersFailed ? (
             <p className="rounded-xl border bg-card p-3 text-sm text-muted-foreground">Couldn't load the speaker list.</p>
           ) : targets.length === 0 ? (
-            <p className="rounded-xl border bg-card p-3 text-sm text-muted-foreground">
-              {speakers.length === 0
-                ? "No speaker list for this conference yet. Import it from the conference website (Conferences → Import from URL) to fill this in."
-                : "You've met every listed speaker."}
-            </p>
+            speakers.length === 0 ? (
+              <div className="space-y-2 rounded-xl border bg-card p-3 text-sm text-muted-foreground print:hidden">
+                <p>No speaker list for this conference yet. Paste the event's speakers, keynote or agenda page:</p>
+                <ImportSpeakers conferenceId={conference.id} />
+              </div>
+            ) : (
+              <p className="rounded-xl border bg-card p-3 text-sm text-muted-foreground">You've met every listed speaker.</p>
+            )
           ) : (
             <ul className="divide-y rounded-xl border bg-card">
               {targets.map((s) => (

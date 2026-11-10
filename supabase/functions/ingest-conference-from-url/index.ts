@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { authenticate } from "../_shared/auth.ts";
+import { authenticate, requireConferenceAccess } from "../_shared/auth.ts";
 import { safeFetchText, UnsafeUrlError } from "../_shared/safe-fetch.ts";
 
 const corsHeaders = {
@@ -70,7 +70,10 @@ serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    // conference_id: "speakers only" mode. Reads a speakers/agenda page and adds
+    // the named speakers to that existing conference; the conference itself
+    // and its calendar entry are left untouched.
+    const { url, conference_id: targetConferenceId } = await req.json();
     console.log("=== Starting conference ingestion ===");
     console.log("Input URL:", url);
 
@@ -88,6 +91,17 @@ serve(async (req) => {
     const user = auth.user;
     const supabase = auth.admin;
     console.log("User authenticated:", user.id);
+
+    if (targetConferenceId !== undefined && targetConferenceId !== null) {
+      if (typeof targetConferenceId !== "string" || !/^[0-9a-f-]{36}$/i.test(targetConferenceId)) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Invalid conference id" }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const denied = await requireConferenceAccess(auth, targetConferenceId, corsHeaders);
+      if (denied) return denied;
+    }
 
 
     // Pages we can't read, or that don't show the dates, are refused rather
@@ -301,6 +315,18 @@ Example good description:
 
     const parsedData = JSON.parse(toolCall.function.arguments);
     console.log("Successfully parsed conference data:", JSON.stringify(parsedData, null, 2));
+
+    if (targetConferenceId) {
+      const speakerCount = await saveImportedSpeakers(supabase, targetConferenceId, url, parsedData.speakers);
+      console.log("Speakers-only import saved:", speakerCount);
+      if (speakerCount === 0) {
+        return cannotImport("Hallway didn't find any named speakers on that page. Try the event's speakers, keynote or agenda page.");
+      }
+      return new Response(
+        JSON.stringify({ success: true, speakers_only: true, conference: { id: targetConferenceId, speaker_count: speakerCount } }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Name and both dates are required; never invent them.
     if (!parsedData.name || !parsedData.start_date || !parsedData.end_date) {
