@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.forecast-pursuits]
 verify_jwt = true
+
+[functions.forecast-people]
+verify_jwt = true
