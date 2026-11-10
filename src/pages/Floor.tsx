@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UploadBusinessCardDialog } from "@/components/conferences/UploadBusinessCardDialog";
 import { VoiceRecapDialog } from "@/components/conferences/VoiceRecapDialog";
 import { ForecastPursuits } from "@/components/conferences/ForecastPursuits";
+import { ForecastPeople } from "@/components/conferences/ForecastPeople";
 import { safeFormat, tryParseDate } from "@/utils/dateHelpers";
 import { cn } from "@/lib/utils";
 
@@ -261,6 +262,8 @@ export default function Floor() {
             </ul>
           </div>
         )}
+
+        <ForecastPeople speakers={speakers} leads={leads} />
 
         <div className="space-y-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground"><Users className="h-4 w-4" /> Speakers you haven't met</h3>
