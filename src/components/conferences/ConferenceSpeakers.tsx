@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Mic } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ImportSpeakers } from "./ImportSpeakers";
 
 interface ConferenceSpeakersProps {
   conferenceId: string;
@@ -25,7 +26,19 @@ export function ConferenceSpeakers({ conferenceId }: ConferenceSpeakersProps) {
     },
   });
 
-  if (isLoading || speakers.length === 0) return null;
+  if (isLoading) return null;
+
+  if (speakers.length === 0) {
+    return (
+      <div className="mt-3 rounded-lg border border-dashed border-border p-3">
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+          <Mic className="h-3.5 w-3.5" /> Speakers
+        </div>
+        <p className="mb-2 text-xs text-muted-foreground">Add the speaker list so Floor Mode can tell you who to meet.</p>
+        <ImportSpeakers conferenceId={conferenceId} />
+      </div>
+    );
+  }
 
   return (
     <div className="mt-3 rounded-lg border border-border p-3">
@@ -49,6 +62,10 @@ export function ConferenceSpeakers({ conferenceId }: ConferenceSpeakersProps) {
           </li>
         ))}
       </ul>
+      <details className="mt-2">
+        <summary className="cursor-pointer text-xs text-muted-foreground">Import more speakers from a page</summary>
+        <ImportSpeakers conferenceId={conferenceId} className="mt-2" />
+      </details>
     </div>
   );
 }
