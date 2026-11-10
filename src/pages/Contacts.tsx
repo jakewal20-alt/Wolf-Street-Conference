@@ -34,7 +34,8 @@ import {
   User,
   Camera,
   Linkedin,
-  RefreshCw
+  RefreshCw,
+  Landmark
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
@@ -42,6 +43,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { safeDate } from '@/utils/dateHelpers';
 import ContactDetailDialog from '@/components/contacts/ContactDetailDialog';
 import UploadBusinessCardDialog from '@/components/contacts/UploadBusinessCardDialog';
+import AddFromDirectoryDialog from '@/components/contacts/AddFromDirectoryDialog';
 
 interface Contact {
   id: string;
@@ -73,6 +75,7 @@ export default function Contacts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBusinessCardOpen, setIsBusinessCardOpen] = useState(false);
+  const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [newContact, setNewContact] = useState({
     name: '',
@@ -180,6 +183,10 @@ export default function Contacts() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsDirectoryOpen(true)}>
+            <Landmark className="h-4 w-4 mr-2" />
+            Add from Directory
+          </Button>
           <Button variant="outline" onClick={() => setIsBusinessCardOpen(true)}>
             <Camera className="h-4 w-4 mr-2" />
             Scan Card
@@ -269,6 +276,8 @@ export default function Contacts() {
             </DialogContent>
           </Dialog>
         </div>
+
+        <AddFromDirectoryDialog open={isDirectoryOpen} onOpenChange={setIsDirectoryOpen} />
 
         {/* Business Card Upload Dialog */}
         <UploadBusinessCardDialog

@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.forecast-people]
 verify_jwt = true
+
+[functions.forecast-directory]
+verify_jwt = true
