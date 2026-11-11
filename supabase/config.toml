@@ -74,3 +74,6 @@ verify_jwt = true
 
 [functions.import-exhibitors]
 verify_jwt = true
+
+[functions.forecast-companies]
+verify_jwt = true

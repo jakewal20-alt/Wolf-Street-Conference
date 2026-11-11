@@ -62,8 +62,32 @@ export function orgKeys(name: string | null | undefined): string[] {
   for (const m of name.matchAll(/\(([^)]+)\)/g)) add(m[1]);
   const parts = name.replace(/\(.*?\)/g, " ").split(/\s+[-–—|/]\s+/);
   if (parts.length > 1) parts.forEach(add);
+  // Defense firms that go by an acronym on one list and a legal name on another
+  // ("GDIT" on a booth list, "General Dynamics Information Technology, Inc." on USAspending).
+  for (const k of [...keys]) {
+    for (const [acronym, full] of PRIME_ALIASES) {
+      if (k === acronym || k.startsWith(`${acronym} `)) keys.add(full);
+      if (k === full || k.startsWith(`${full} `)) keys.add(acronym);
+    }
+  }
   return [...keys];
 }
+
+const PRIME_ALIASES: [string, string][] = [
+  ["gdit", "general dynamics information technology"],
+  ["gdms", "general dynamics mission systems"],
+  ["saic", "science applications international"],
+  ["hii", "huntington ingalls industries"],
+  ["rtx", "raytheon"],
+  ["ara", "applied research associates"],
+  ["sna", "systems planning and analysis"],
+  ["l3harris", "l3harris technologies"],
+  ["caci", "caci international"],
+  ["kbr", "kbr wyle services"],
+];
+
+// Short one-word names that are a company on their own (exact or whole-word match).
+const SHORT_ORG_OK = new Set(["caci", "saic", "gdit", "kbr", "hii", "rtx", "cae", "bae", "ara", "sna", "v2x", "faac", "esri"]);
 
 // One-word names too common to match inside a longer name on their own.
 const GENERIC_ORG_WORDS = new Set([
@@ -76,7 +100,7 @@ const GENERIC_ORG_WORDS = new Set([
 export function keysMatch(a: string, b: string): boolean {
   if (a === b) return a.length >= 3;
   const [short, long] = a.length <= b.length ? [a, b] : [b, a];
-  if (short.split(" ").length < 2 && (short.length < 6 || GENERIC_ORG_WORDS.has(short))) return false;
+  if (short.split(" ").length < 2 && !SHORT_ORG_OK.has(short) && (short.length < 6 || GENERIC_ORG_WORDS.has(short))) return false;
   return ` ${long} `.includes(` ${short} `);
 }
 

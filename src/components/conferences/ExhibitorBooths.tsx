@@ -12,9 +12,43 @@ type SpeakerLike = { id: string; name: string; title: string | null; organizatio
 type LeadLike = { id: string; contact_name: string; company: string | null };
 type ContactLike = { id: string; name: string; org_name: string | null; role: string | null };
 
-type Reason = { kind: "pursuit" | "speaker" | "contact" | "met"; text: string };
-const RANK: Record<Reason["kind"], number> = { pursuit: 0, speaker: 1, contact: 2, met: 3 };
-const LABEL: Record<Reason["kind"], string> = { pursuit: "Your pursuit", speaker: "Speaking here", contact: "You know", met: "Met here" };
+type Reason = { kind: "incumbent" | "winner" | "service" | "pursuit" | "speaker" | "contact" | "met"; text: string };
+const RANK: Record<Reason["kind"], number> = { incumbent: 0, winner: 1, service: 2, pursuit: 3, speaker: 4, contact: 5, met: 6 };
+const LABEL: Record<Reason["kind"], string> = {
+  incumbent: "Incumbent",
+  winner: "Wins work",
+  service: "Customer",
+  pursuit: "Your pursuit",
+  speaker: "Speaking here",
+  contact: "You know",
+  met: "Met here",
+};
+const PURSUIT_KINDS = new Set<Reason["kind"]>(["incumbent", "winner", "service", "pursuit"]);
+
+type ForecastPursuit = { id: string; name: string; stage: string | null; program: string | null; service: string | null; url: string | null };
+type ForecastCompany = { name: string; role: "incumbent" | "recipient"; detail: string | null; obligated: number | null; pursuit: ForecastPursuit };
+
+// The service's own booths: "U.S. Army", "Army Modeling & Simulation Office", "Office of Naval
+// Research", "USAF/USSF", "AFRL/RHW". Not associations that carry the name (AUSA).
+const SERVICE_BOOTH: Record<string, RegExp> = {
+  Army: /^(u\.?\s?s\.?\s+|us\s+|united states\s+)?army\b/i,
+  Navy: /^(u\.?\s?s\.?\s+|us\s+|united states\s+)?(navy|naval)\b|^office of naval research\b|^(nawc|navair|navsea|navwar|nswc|nuwc|onr)\b/i,
+  "Air Force": /^(u\.?\s?s\.?\s+|us\s+)?air force\b|^usaf\b|^(afrl|aflcmc|afams)\b|^(first|second|third|fourth|fifth|\d+(st|nd|rd|th)?)\s+air force\b/i,
+};
+
+function useForecastCompanies() {
+  const { data } = useQuery({
+    queryKey: ["forecast-companies"],
+    staleTime: 10 * 60_000,
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("forecast-companies", { method: "GET" });
+      if (error || !data?.available) return { pursuits: [] as ForecastPursuit[], companies: [] as ForecastCompany[] };
+      return data as { pursuits: ForecastPursuit[]; companies: ForecastCompany[] };
+    },
+  });
+  return data;
+}
 
 const MAX_TO_VISIT = 15;
 const MAX_SEARCH = 30;
@@ -34,8 +68,10 @@ function groupByCompany(rows: Exhibitor[]) {
 const boothText = (booths: string[]) => (booths.length ? `Booth ${booths.join(", ")}` : "No booth listed");
 
 /**
- * Floor Mode's exhibitor section: booths worth a stop (companies tied to your
- * Forecast pursuits, speakers here, your contacts, people you've met here),
+ * Floor Mode's exhibitor section: booths worth a stop (incumbents and the
+ * companies winning work on your Forecast pursuits' programs, the customer's own
+ * service booths, people on your pursuits, speakers here, your contacts, people
+ * you've met here),
  * a find-a-booth search, and the import when there's no list yet.
  */
 export function ExhibitorBooths({
@@ -51,6 +87,7 @@ export function ExhibitorBooths({
 }) {
   const [query, setQuery] = useState("");
   const forecastPeople = useForecastPeople();
+  const forecast = useForecastCompanies();
 
   const { data: exhibitors = [], isError, isLoading } = useQuery({
     queryKey: ["conference-exhibitors", conferenceId],
@@ -72,6 +109,14 @@ export function ExhibitorBooths({
   const toVisit = useMemo(() => {
     // Every organization we know someone at, with why it matters.
     const sources: { keys: string[]; reason: Reason }[] = [];
+    for (const c of forecast?.companies ?? []) {
+      sources.push({
+        keys: orgKeys(c.name),
+        reason: c.role === "incumbent"
+          ? { kind: "incumbent", text: `${c.pursuit.name}${c.detail ? ` · ${c.detail}` : ""}` }
+          : { kind: "winner", text: `${c.pursuit.name}${c.detail ? ` · ${c.detail}` : ""}` },
+      });
+    }
     for (const p of forecastPeople) {
       if (!p.org || p.pursuits.length === 0) continue;
       const pursuits = Array.from(new Set(p.pursuits.map((x) => x.name))).join(", ");
@@ -86,7 +131,12 @@ export function ExhibitorBooths({
     for (const l of leads) {
       if (l.company) sources.push({ keys: orgKeys(l.company), reason: { kind: "met", text: l.contact_name } });
     }
-    if (sources.length === 0) return [];
+    // Your pursuits by service, for that service's own booths.
+    const byService = new Map<string, ForecastPursuit[]>();
+    for (const p of forecast?.pursuits ?? []) {
+      if (p.service && SERVICE_BOOTH[p.service]) byService.set(p.service, [...(byService.get(p.service) ?? []), p]);
+    }
+    if (sources.length === 0 && byService.size === 0) return [];
 
     const hits: { name: string; booths: string[]; reasons: Reason[] }[] = [];
     for (const company of companies) {
@@ -94,6 +144,18 @@ export function ExhibitorBooths({
       const reasons = sources
         .filter((src) => src.keys.some((a) => keys.some((b) => keysMatch(a, b))))
         .map((src) => src.reason);
+      for (const [service, list] of byService) {
+        if (SERVICE_BOOTH[service].test(company.name.trim())) {
+          reasons.push({ kind: "service", text: `${service} booth · ${list.map((p) => p.name).join(", ")}` });
+        }
+      }
+      // The same company can be named twice for one pursuit (incumbent and top recipient): keep one line each.
+      const seen = new Set<string>();
+      for (let i = reasons.length - 1; i >= 0; i--) {
+        const key = `${reasons[i].kind}|${reasons[i].text}`;
+        if (seen.has(key)) reasons.splice(i, 1);
+        else seen.add(key);
+      }
       if (reasons.length) {
         reasons.sort((a, b) => RANK[a.kind] - RANK[b.kind]);
         hits.push({ ...company, reasons });
@@ -102,7 +164,7 @@ export function ExhibitorBooths({
     return hits
       .sort((a, b) => RANK[a.reasons[0].kind] - RANK[b.reasons[0].kind] || b.reasons.length - a.reasons.length || a.name.localeCompare(b.name))
       .slice(0, MAX_TO_VISIT);
-  }, [companies, forecastPeople, speakers, contacts, leads]);
+  }, [companies, forecast, forecastPeople, speakers, contacts, leads]);
 
   const q = query.trim().toLowerCase();
   const results = q ? companies.filter((c) => c.name.toLowerCase().includes(q) || c.booths.some((b) => b.toLowerCase() === q)) : [];
@@ -134,8 +196,8 @@ export function ExhibitorBooths({
                     <span className="shrink-0 font-semibold text-primary">{boothText(c.booths)}</span>
                   </div>
                   {c.reasons.slice(0, 2).map((r, i) => (
-                    <div key={i} className="truncate text-muted-foreground">
-                      <span className={r.kind === "pursuit" ? "font-semibold text-primary" : "font-medium text-foreground"}>{LABEL[r.kind]}:</span> {r.text}
+                    <div key={i} className="line-clamp-2 text-muted-foreground">
+                      <span className={PURSUIT_KINDS.has(r.kind) ? "font-semibold text-primary" : "font-medium text-foreground"}>{LABEL[r.kind]}:</span> {r.text}
                     </div>
                   ))}
                   {c.reasons.length > 2 && <div className="text-xs text-muted-foreground">+{c.reasons.length - 2} more</div>}
