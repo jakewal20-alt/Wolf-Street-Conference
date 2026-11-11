@@ -1,5 +1,5 @@
 import { Resend } from 'https://esm.sh/resend@4.0.0';
-import { authenticate, requireConferenceAccess, escapeHtml } from '../_shared/auth.ts';
+import { authenticate, escapeHtml } from '../_shared/auth.ts';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
 const FROM_EMAIL = Deno.env.get('EMAIL_FROM_ADDRESS') || 'Hallway <calendar@resend.dev>';
@@ -167,20 +167,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Caller must own the event, be an admin, or have access to the
-    // conference this event is linked to.
-    let canSend = auth.isAdmin || event.user_id === auth.user.id;
-    if (!canSend) {
-      const { data: linkedConf } = await supabase
-        .from('conferences')
-        .select('id')
-        .eq('calendar_event_id', event_id)
-        .limit(1)
-        .maybeSingle();
-      if (linkedConf) {
-        canSend = (await requireConferenceAccess(auth, linkedConf.id, corsHeaders)) === null;
-      }
-    }
+    // Whole-company visibility: anyone approved in the event's company may
+    // send its invite; nobody outside it can (admins included).
+    const canSend = event.org_id === auth.orgId;
     if (!canSend) {
       return new Response(
         JSON.stringify({ error: 'Event not found' }),
@@ -209,6 +198,8 @@ Deno.serve(async (req) => {
         .from('profiles')
         .select('email')
         .eq('id', recipient_user_id)
+        .eq('org_id', auth.orgId)
+        .eq('is_approved', true)
         .maybeSingle();
       if (!teammate?.email) {
         return new Response(

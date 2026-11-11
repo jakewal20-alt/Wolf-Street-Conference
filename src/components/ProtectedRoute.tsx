@@ -56,7 +56,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     const checkApproval = async (attempt: number) => {
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("is_approved")
+        .select("is_approved, org_id")
         .eq("id", userId)
         .maybeSingle();
       if (cancelled) return;
@@ -73,7 +73,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       }
 
       setApprovalError(false);
-      setIsApproved(profile.is_approved ?? false);
+      // Hallway access = approved AND in a company.
+      setIsApproved(Boolean(profile.is_approved && profile.org_id));
       setLoading(false);
     };
 

@@ -17,9 +17,9 @@ export default function PendingApproval({ email }: PendingApprovalProps) {
           <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center">
             <Clock className="w-8 h-8 text-warning" />
           </div>
-          <CardTitle className="text-2xl">Pending Approval</CardTitle>
+          <CardTitle className="text-2xl">No Hallway access yet</CardTitle>
           <CardDescription className="text-base mt-2">
-            Your account has been created but is waiting for administrator approval.
+            Your Wolf Street account isn't part of a Hallway company yet.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -28,7 +28,7 @@ export default function PendingApproval({ email }: PendingApprovalProps) {
             <p className="font-medium">{email}</p>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            An administrator will review your access request. Please check back later.
+            Ask your company's Hallway admin to invite you. Once they do, sign out and back in.
           </p>
           <Button variant="outline" className="w-full" onClick={handleSignOut}>
             <LogOut className="w-4 h-4 mr-2" />

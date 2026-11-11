@@ -44,6 +44,15 @@ Hallway's Supabase Auth is the single login for the Wolf Street suite: Forecast 
 
 Public sign-up is off. Admins invite people from **Users** (the `admin-invite-user` function). Invited accounts are approved automatically, and the invite link opens `/reset-password` so the person can choose a password.
 
+## Companies
+
+Every Hallway record belongs to one company (`organizations`; `org_id` on each table), and row-level security limits people to their own company's data. A Hallway member is a profile that is approved **and** has an `org_id`; any other Wolf Street login (e.g. a Forecast-only user) sees nothing in Hallway.
+
+- **Platform admin** (`profiles.is_platform_admin`, set only from the SQL editor): creates companies on the Users page and invites into any company.
+- **Company admins** (`is_admin`): invite, approve, pause and remove people in their own company only. "Remove" takes away Hallway access; it doesn't delete the suite login.
+- `org_id` is stamped by a trigger on insert and can't be changed by users. Service-role inserts take it from the row's conference, else its creator.
+- The `forecast-conferences` feed only returns the company in `FORECAST_ORG_SLUG` (default `mavrc`).
+
 ## Wolf Street single sign-on
 
 Hallway is the sign-in point for the suite. Another app with no session sends the browser to `https://bacnswolfstreet.com/sso?app=forecast|samklr|ghostwriter|wolfstreet&return=<url>`. Hallway signs the person in if needed, then the `sso-handoff` function returns a one-time magic-link code. The browser goes back to `<return>#wolfstreet_sso=<code>`, and the app exchanges the code with `verifyOtp({ token_hash, type: "magiclink" })` for its own session. Refresh tokens are never shared between apps.

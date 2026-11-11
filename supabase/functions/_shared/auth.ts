@@ -16,7 +16,12 @@ import { createClient, SupabaseClient, User } from "https://esm.sh/@supabase/sup
 
 export interface AuthContext {
   user: User;
+  /** Admin of their own company. */
   isAdmin: boolean;
+  /** Runs Hallway itself: creates companies, invites into any company. */
+  isPlatformAdmin: boolean;
+  /** The caller's company. Every record they touch must belong to it. */
+  orgId: string;
   /** Service-role client. Bypasses RLS: only use after checking access. */
   admin: SupabaseClient;
 }
@@ -46,18 +51,28 @@ export async function authenticate(
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("is_approved, is_admin")
+    .select("is_approved, is_admin, is_platform_admin, org_id")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile?.is_approved) {
+  if (!profile?.is_approved || !profile.org_id) {
     return json({ error: "Account pending approval" }, 403, corsHeaders);
   }
 
-  return { user, isAdmin: profile.is_admin === true, admin };
+  return {
+    user,
+    isAdmin: profile.is_admin === true,
+    isPlatformAdmin: profile.is_platform_admin === true,
+    orgId: profile.org_id,
+    admin,
+  };
 }
 
-/** Owner, collaborator, or admin. Returns a 403/404 Response when denied, otherwise null. */
+/**
+ * The conference must belong to the caller's company (admins included: an
+ * admin's reach ends at their own company). Returns a 400/404/500 Response
+ * when denied, otherwise null.
+ */
 export async function requireConferenceAccess(
   auth: AuthContext,
   conferenceId: unknown,
@@ -66,8 +81,6 @@ export async function requireConferenceAccess(
   if (typeof conferenceId !== "string" || !conferenceId) {
     return json({ error: "Missing conference id" }, 400, corsHeaders);
   }
-  if (auth.isAdmin) return null;
-
   const { data: allowed, error } = await auth.admin.rpc("can_access_conference", {
     conf_id: conferenceId,
     uid: auth.user.id,
