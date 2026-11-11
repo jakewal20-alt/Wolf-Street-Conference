@@ -100,7 +100,7 @@ export function ImportSpeakers({ conferenceId, className }: { conferenceId: stri
       </div>
       <Button type="submit" variant="outline" disabled={!canSubmit || mutation.isPending} className="shrink-0 sm:self-start">
         {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
-        {mutation.isPending ? "Reading page…" : "Import speakers"}
+        {mutation.isPending ? "Reading page (up to a minute)…" : "Import speakers"}
       </Button>
     </form>
   );

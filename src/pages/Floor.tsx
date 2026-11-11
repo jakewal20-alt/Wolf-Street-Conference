@@ -11,6 +11,7 @@ import { VoiceRecapDialog } from "@/components/conferences/VoiceRecapDialog";
 import { ForecastPursuits } from "@/components/conferences/ForecastPursuits";
 import { ForecastPeople } from "@/components/conferences/ForecastPeople";
 import { ImportSpeakers } from "@/components/conferences/ImportSpeakers";
+import { ExhibitorBooths } from "@/components/conferences/ExhibitorBooths";
 import { useBudgetMatches } from "@/components/conferences/useBudgetMatches";
 import { safeFormat, tryParseDate } from "@/utils/dateHelpers";
 import { cn } from "@/lib/utils";
@@ -57,7 +58,8 @@ function dateRange(c: Conference) {
  * Show Floor Mode: a phone-first screen for working a conference. Two big
  * buttons (scan a card, record a voice recap) for the current conference,
  * what was captured today, and a "who to meet" hit list from the speaker
- * list, the people already met there, and your contacts at speakers' orgs.
+ * list, the people already met there, your contacts at speakers' orgs, and
+ * the exhibitor booths tied to people you track or know.
  */
 export default function Floor() {
   const [params, setParams] = useSearchParams();
@@ -312,6 +314,8 @@ export default function Floor() {
             </ul>
           )}
         </div>
+
+        <ExhibitorBooths conferenceId={conference.id} speakers={speakers} leads={leads} contacts={contacts} />
 
         {insiders.length > 0 && (
           <div className="space-y-2">
