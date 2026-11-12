@@ -101,7 +101,7 @@ export function EditConferenceDialog({ open, onOpenChange, conference }: EditCon
             end_date: updatedData.end_date,
             location: updatedData.location,
             description: updatedData.description || undefined,
-          });
+          }, { start_date: conference.start_date, end_date: conference.end_date });
         } catch (calendarError) {
           console.error("Failed to update calendar event:", calendarError);
           toast.error("Conference updated but calendar sync failed");
