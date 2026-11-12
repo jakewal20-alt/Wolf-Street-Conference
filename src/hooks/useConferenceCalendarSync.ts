@@ -1,13 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { subDays, addDays } from "date-fns";
-import { parseDateLocal, safeFormat } from "@/utils/dateHelpers";
+import { subDays, addDays, differenceInCalendarDays } from "date-fns";
+import { parseDateLocal, safeFormat, tryParseDate } from "@/utils/dateHelpers";
 import { getEventColor } from "@/utils/eventTypeHelpers";
 
 // Conference ids with a calendar-event creation in flight. A double click (or
 // two dialogs) reuses the same promise instead of inserting a second event.
 const inFlightCreates = new Map<string, Promise<string>>();
+
+// Travel days kept around a conference when it's edited (out before, home after).
+const MAX_TRAVEL_DAYS = 3;
 
 export function useConferenceCalendarSync() {
   const queryClient = useQueryClient();
@@ -237,31 +240,60 @@ export function useConferenceCalendarSync() {
     }
   };
 
+  /**
+   * Update the conference's calendar entry after the conference itself was
+   * edited. The entry may span travel days around the conference (e.g. out
+   * the day before, home the day after); those offsets are measured against
+   * the conference's previous dates and kept, so editing the conference
+   * doesn't silently drop them.
+   */
   const updateCalendarEventFromConference = async (
     calendarEventId: string,
     updates: {
-      name?: string;
-      start_date?: string;
-      end_date?: string;
+      name: string;
+      start_date: string;
+      end_date: string;
       location?: string;
       description?: string;
-    }
+    },
+    previous?: { start_date: string; end_date: string | null },
   ) => {
     try {
-      const { error } = await supabase
-        .from("calendar_events")
-        .update({
-          title: updates.name,
+      let travel = { before: 0, after: 0 };
+      if (previous?.start_date) {
+        const { data: event, error: readError } = await supabase
+          .from("calendar_events")
+          .select("start_date,end_date")
+          .eq("id", calendarEventId)
+          .maybeSingle();
+        if (readError) throw readError;
+        const evStart = tryParseDate(event?.start_date);
+        const evEnd = tryParseDate(event?.end_date) ?? evStart;
+        const oldStart = tryParseDate(previous.start_date);
+        const oldEnd = tryParseDate(previous.end_date) ?? oldStart;
+        if (evStart && evEnd && oldStart && oldEnd) {
+          // Only small offsets are travel days; anything else is a calendar
+          // entry that was moved on purpose, and the conference dates win.
+          const clamp = (n: number) => (n > 0 && n <= MAX_TRAVEL_DAYS ? n : 0);
+          travel = {
+            before: clamp(differenceInCalendarDays(oldStart, evStart)),
+            after: clamp(differenceInCalendarDays(evEnd, oldEnd)),
+          };
+        }
+      }
+
+      await updateCalendarEventWithTravelDays(
+        calendarEventId,
+        {
+          id: "",
+          name: updates.name,
           start_date: updates.start_date,
           end_date: updates.end_date,
-          location: updates.location,
-          description: updates.description,
-        })
-        .eq("id", calendarEventId);
-
-      if (error) throw error;
-
-      invalidateConferenceCalendar();
+          location: updates.location ?? "",
+          description: updates.description ?? null,
+        },
+        travel,
+      );
     } catch (error) {
       console.error("Error updating calendar event:", error);
       throw error;
